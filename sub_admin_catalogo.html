@@ -1,0 +1,145 @@
+<!doctype html>
+<html class="light" lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>EcoCanje - Consulta de Premios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { primary: "#006a2b" },
+            fontFamily: { headline: ["Manrope"], body: ["Inter"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-[#f6f7f6] font-body flex min-h-screen">
+    <aside
+      class="w-72 bg-white border-r border-slate-100 p-8 flex flex-col fixed h-full z-30"
+    >
+      <div class="mb-12 flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined text-4xl">nest_eco_leaf</span>
+        <span
+          class="font-headline font-black text-2xl tracking-tighter text-slate-900"
+          >EcoPunto</span
+        >
+      </div>
+      <nav class="space-y-3">
+        <a
+          href="sub_admin.html"
+          class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 font-medium hover:bg-slate-50"
+          ><span class="material-symbols-outlined">dashboard</span> Panel</a
+        >
+        <a
+          href="sub_admin_entrega.html"
+          class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 font-medium hover:bg-slate-50"
+          ><span class="material-symbols-outlined">scale</span> Nueva Entrega</a
+        >
+        <a
+          href="sub_admin_catalogo.html"
+          class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 font-bold"
+          ><span class="material-symbols-outlined">import_contacts</span> Ver
+          Premios</a
+        >
+      </nav>
+      <button
+        onclick="cerrarSesion()"
+        class="flex items-center gap-4 px-6 py-4 rounded-2xl text-red-500 hover:bg-red-50 transition-all font-medium mt-auto"
+      >
+        <span class="material-symbols-outlined">logout</span> Cerrar Sesión
+      </button>
+    </aside>
+
+    <main class="flex-grow ml-72 p-12">
+      <header class="mb-12">
+        <p
+          class="text-primary font-bold text-xs uppercase tracking-widest mb-2 opacity-60"
+        >
+          Información para el Ciudadano
+        </p>
+        <h1 class="font-headline font-black text-5xl text-slate-900 italic">
+          Catálogo de <span class="text-primary">Canjes</span>
+        </h1>
+      </header>
+
+      <div
+        id="catalog-grid"
+        class="grid grid-cols-1 md:grid-cols-3 gap-8"
+      ></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      async function loadCatalog() {
+        try {
+          const { data } = await _supabase.from("recompensas").select("*");
+          if (data && data.length > 0) {
+            document.getElementById("catalog-grid").innerHTML = data
+              .map(
+                (r) => `
+                        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
+                            <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                <span class="material-symbols-outlined text-primary text-sm">redeem</span>
+                            </div>
+                            <h3 class="font-headline font-black text-xl mb-1 text-slate-900">${r.nombre}</h3>
+                            <p class="text-primary font-black text-3xl italic">${r.puntos_requeridos} <span class="text-xs opacity-40">PTS</span></p>
+                        </div>
+                    `,
+              )
+              .join("");
+          } else {
+            document.getElementById("catalog-grid").innerHTML =
+              '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles</div>';
+          }
+        } catch (error) {
+          console.error("Error loading catalog:", error);
+        }
+      }
+
+      async function verificarAutenticacion() {
+        const {
+          data: { user },
+        } = await _supabase.auth.getUser();
+        if (!user) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        const { data: profile } = await _supabase
+          .from("profiles")
+          .select("rol")
+          .eq("id", user.id)
+          .single();
+
+        if (
+          !profile ||
+          (profile.rol !== "subadmin" && profile.rol !== "admin")
+        ) {
+          window.location.href = "Usuario.html";
+        } else {
+          loadCatalog();
+        }
+      }
+
+      async function cerrarSesion() {
+        await _supabase.auth.signOut();
+        window.location.href = "index.html";
+      }
+
+      window.onload = verificarAutenticacion;
+    </script>
+  </body>
+</html>

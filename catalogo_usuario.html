@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <title>EcoCanje - Catálogo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { primary: "#006a2b" },
+            fontFamily: { headline: ["Manrope"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-[#f6f7f6] min-h-screen p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+      <header class="flex justify-between items-center mb-12">
+        <a
+          href="Usuario.html"
+          class="flex items-center gap-2 text-slate-500 font-bold hover:text-primary transition-colors"
+        >
+          <span class="material-symbols-outlined">arrow_back</span> Volver
+        </a>
+        <div
+          class="bg-white px-6 py-3 rounded-full border border-slate-100 shadow-sm flex items-center gap-3"
+        >
+          <span class="text-[10px] font-black uppercase text-slate-400"
+            >Tus Puntos:</span
+          >
+          <span
+            id="mis-puntos"
+            class="font-headline font-black text-primary text-xl"
+            >0</span
+          >
+        </div>
+      </header>
+
+      <h1 class="font-headline font-black text-5xl text-slate-900 mb-4 italic">
+        Premios <span class="text-primary">Disponibles</span>
+      </h1>
+      <p class="text-slate-500 mb-12 max-w-xl">
+        Canjea tus EcoPuntos por productos sostenibles y beneficios en comercios
+        aliados.
+      </p>
+
+      <div
+        id="grid-recompensas"
+        class="grid grid-cols-1 md:grid-cols-3 gap-8"
+      ></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      let puntosActuales = 0;
+
+      async function cargarCatalogo() {
+        try {
+          const {
+            data: { user },
+          } = await _supabase.auth.getUser();
+          if (!user) {
+            window.location.href = "index.html";
+            return;
+          }
+
+          const { data: profile } = await _supabase
+            .from("profiles")
+            .select("puntos")
+            .eq("id", user.id)
+            .single();
+
+          puntosActuales = profile?.puntos || 0;
+          document.getElementById("mis-puntos").innerText = puntosActuales;
+
+          const { data: recompensas } = await _supabase
+            .from("recompensas")
+            .select("*");
+
+          if (recompensas && recompensas.length > 0) {
+            document.getElementById("grid-recompensas").innerHTML = recompensas
+              .map((r) => {
+                const puede = puntosActuales >= r.puntos_requeridos;
+                return `
+                        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col group">
+                            <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                                <span class="material-symbols-outlined">redeem</span>
+                            </div>
+                            <h3 class="font-headline font-black text-xl text-slate-900 mb-2">${r.nombre}</h3>
+                            <p class="text-3xl font-headline font-black text-primary mb-8 italic">${r.puntos_requeridos} <span class="text-xs opacity-40">ECO</span></p>
+                            <button 
+                                ${!puede ? "disabled" : `onclick="canjearPremio('${r.id}', ${r.puntos_requeridos})"`}
+                                class="mt-auto w-full py-4 rounded-2xl font-bold transition-all ${puede ? "bg-primary text-white hover:bg-slate-900 shadow-lg shadow-primary/20" : "bg-slate-100 text-slate-400 cursor-not-allowed"}"
+                            >
+                                ${puede ? "Canjear" : "Faltan " + (r.puntos_requeridos - puntosActuales) + " pts"}
+                            </button>
+                        </div>`;
+              })
+              .join("");
+          } else {
+            document.getElementById("grid-recompensas").innerHTML =
+              '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles por ahora</div>';
+          }
+        } catch (error) {
+          console.error("Error cargando catálogo:", error);
+          alert("Error al cargar el catálogo");
+        }
+      }
+
+      async function canjearPremio(recompensaId, puntosRequeridos) {
+        if (puntosActuales < puntosRequeridos) {
+          alert("No tienes suficientes puntos para canjear este premio");
+          return;
+        }
+
+        try {
+          const {
+            data: { user },
+          } = await _supabase.auth.getUser();
+
+          // Actualizar puntos del usuario
+          const nuevosPuntos = puntosActuales - puntosRequeridos;
+          const { error: updateError } = await _supabase
+            .from("profiles")
+            .update({ puntos: nuevosPuntos })
+            .eq("id", user.id);
+
+          if (updateError) throw updateError;
+
+          // Registrar el canje (opcional - crear tabla canjes)
+          alert("🎉 ¡Premio canjeado con éxito!");
+          cargarCatalogo(); // Recargar catálogo
+        } catch (error) {
+          console.error("Error al canjear:", error);
+          alert("Error al procesar el canje");
+        }
+      }
+
+      window.onload = cargarCatalogo;
+    </script>
+  </body>
+</html>
