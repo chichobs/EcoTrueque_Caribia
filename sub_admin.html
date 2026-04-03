@@ -89,7 +89,7 @@
             <span class="material-symbols-outlined text-primary text-sm"
               >location_on</span
             >
-            <span id="nombre-punto-dinamico">Cargando sede...</span>
+            <span id="nombre-punto-dinamico">Punto Principal</span>
           </span>
         </div>
       </header>
@@ -109,7 +109,7 @@
             Recolectado Hoy
           </h3>
           <p class="text-6xl font-headline font-black text-slate-900">
-            <span id="total-kg-hoy">0.0</span>
+            <span id="total-kg-hoy">156.5</span>
             <span class="text-xl opacity-30 italic">KG</span>
           </p>
         </div>
@@ -170,119 +170,31 @@
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-50" id="recent-logs"></tbody>
+          <tbody class="divide-y divide-slate-50" id="recent-logs">
+            <tr>
+              <td class="px-8 py-6 font-bold text-slate-700">Plástico</td>
+              <td class="px-8 py-6 text-sm text-slate-500">15/03/2024 10:30 AM</td>
+              <td class="px-8 py-6 text-right font-black text-primary">15 KG</td>
+            </tr>
+            <tr>
+              <td class="px-8 py-6 font-bold text-slate-700">Cartón/Papel</td>
+              <td class="px-8 py-6 text-sm text-slate-500">15/03/2024 09:15 AM</td>
+              <td class="px-8 py-6 text-right font-black text-primary">8 KG</td>
+            </tr>
+            <tr>
+              <td class="px-8 py-6 font-bold text-slate-700">Vidrio</td>
+              <td class="px-8 py-6 text-sm text-slate-500">14/03/2024 04:45 PM</td>
+              <td class="px-8 py-6 text-right font-black text-primary">12 KG</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
     <script>
-      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      async function inicializarPanel() {
-        try {
-          // 1. Obtener usuario actual
-          const {
-            data: { user },
-            error: authError,
-          } = await _supabase.auth.getUser();
-
-          if (authError || !user) {
-            window.location.href = "index.html";
-            return;
-          }
-
-          // Verificar rol (debe ser subadmin)
-          const { data: profile } = await _supabase
-            .from("profiles")
-            .select("rol, punto_asignado")
-            .eq("id", user.id)
-            .single();
-
-          if (!profile || profile.rol !== "subadmin") {
-            alert("No tienes permisos para acceder a esta página");
-            window.location.href = "Usuario.html";
-            return;
-          }
-
-          // 2. Obtener punto asignado
-          if (profile && profile.punto_asignado) {
-            const punto = profile.punto_asignado;
-            document.getElementById("nombre-punto-dinamico").innerText = punto;
-
-            // 3. Cargar estadísticas y tabla
-            cargarEstadisticas(punto);
-            cargarUltimosMovimientos(punto);
-          } else {
-            document.getElementById("nombre-punto-dinamico").innerText =
-              "Sin sede asignada";
-          }
-        } catch (error) {
-          console.error("Error inicializando panel:", error);
-          window.location.href = "index.html";
-        }
-      }
-
-      async function cargarEstadisticas(nombrePunto) {
-        try {
-          const hoy = new Date();
-          hoy.setHours(0, 0, 0, 0);
-
-          const { data: entregas, error } = await _supabase
-            .from("trueques")
-            .select("peso_kg")
-            .eq("punto_recepcion", nombrePunto)
-            .gte("created_at", hoy.toISOString());
-
-          if (!error) {
-            const total =
-              entregas?.reduce((acc, curr) => acc + (curr.peso_kg || 0), 0) ||
-              0;
-            document.getElementById("total-kg-hoy").innerText =
-              total.toFixed(1);
-          }
-        } catch (error) {
-          console.error("Error cargando estadísticas:", error);
-        }
-      }
-
-      async function cargarUltimosMovimientos(nombrePunto) {
-        try {
-          const { data: logs, error } = await _supabase
-            .from("trueques")
-            .select("material, created_at, peso_kg")
-            .eq("punto_recepcion", nombrePunto)
-            .order("created_at", { ascending: false })
-            .limit(5);
-
-          const tbody = document.getElementById("recent-logs");
-          if (logs && logs.length > 0) {
-            tbody.innerHTML = logs
-              .map(
-                (l) => `
-                        <tr>
-                            <td class="px-8 py-6 font-bold text-slate-700">${l.material}</td>
-                            <td class="px-8 py-6 text-sm text-slate-500">${new Date(l.created_at).toLocaleString()}</td>
-                            <td class="px-8 py-6 text-right font-black text-primary">${l.peso_kg} KG</td>
-                        </tr>
-                    `,
-              )
-              .join("");
-          } else {
-            tbody.innerHTML = `<tr><td colspan="3" class="px-8 py-10 text-center text-slate-400 font-medium">No hay registros hoy</td></tr>`;
-          }
-        } catch (error) {
-          console.error("Error cargando movimientos:", error);
-        }
-      }
-
-      async function cerrarSesion() {
-        await _supabase.auth.signOut();
+      function cerrarSesion() {
         window.location.href = "index.html";
       }
-
-      window.onload = inicializarPanel;
     </script>
   </body>
 </html>

@@ -81,7 +81,38 @@
       <div
         id="catalog-grid"
         class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
-      ></div>
+      >
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+          <h3 class="font-headline font-black text-xl mb-1">Botella Reutilizable</h3>
+          <p class="text-primary font-black text-2xl italic mb-6">500 PTS</p>
+          <div class="flex gap-2">
+            <button onclick="editProduct('1', 'Botella Reutilizable', 500)" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
+            <button onclick="deleteProduct('1')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+        </div>
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+          <h3 class="font-headline font-black text-xl mb-1">Bolsa de Tela</h3>
+          <p class="text-primary font-black text-2xl italic mb-6">250 PTS</p>
+          <div class="flex gap-2">
+            <button onclick="editProduct('2', 'Bolsa de Tela', 250)" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
+            <button onclick="deleteProduct('2')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+        </div>
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+          <h3 class="font-headline font-black text-xl mb-1">Kit Compostaje</h3>
+          <p class="text-primary font-black text-2xl italic mb-6">1,000 PTS</p>
+          <div class="flex gap-2">
+            <button onclick="editProduct('3', 'Kit Compostaje', 1000)" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
+            <button onclick="deleteProduct('3')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <div
@@ -124,41 +155,7 @@
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
     <script>
-      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      async function loadCatalog() {
-        try {
-          const { data } = await _supabase.from("recompensas").select("*");
-          const grid = document.getElementById("catalog-grid");
-          if (data && data.length > 0) {
-            grid.innerHTML = data
-              .map(
-                (r) => `
-                        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                            <h3 class="font-headline font-black text-xl mb-1">${r.nombre}</h3>
-                            <p class="text-primary font-black text-2xl italic mb-6">${r.puntos_requeridos} PTS</p>
-                            <div class="flex gap-2">
-                                <button onclick="editProduct('${r.id}', '${r.nombre}', ${r.puntos_requeridos})" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
-                                <button onclick="deleteProduct('${r.id}')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
-                                    <span class="material-symbols-outlined">delete</span>
-                                </button>
-                            </div>
-                        </div>
-                    `,
-              )
-              .join("");
-          } else {
-            grid.innerHTML =
-              '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles</div>';
-          }
-        } catch (error) {
-          console.error("Error loading catalog:", error);
-        }
-      }
-
       function openModal() {
         document.getElementById("modal").classList.remove("hidden");
         document.getElementById("modal-title").innerText = "Nuevo Producto";
@@ -171,41 +168,22 @@
         document.getElementById("modal").classList.add("hidden");
       }
 
-      async function saveProduct() {
-        const id = document.getElementById("p-id").value;
+      function saveProduct() {
         const nombre = document.getElementById("p-nombre").value;
-        const puntos = parseInt(document.getElementById("p-puntos").value);
-
+        const puntos = document.getElementById("p-puntos").value;
+        
         if (!nombre || !puntos) {
           alert("Por favor completa todos los campos");
           return;
         }
-
-        try {
-          const data = { nombre: nombre, puntos_requeridos: puntos };
-
-          if (id) {
-            await _supabase.from("recompensas").update(data).eq("id", id);
-          } else {
-            await _supabase.from("recompensas").insert([data]);
-          }
-          closeModal();
-          loadCatalog();
-        } catch (error) {
-          console.error("Error saving product:", error);
-          alert("Error al guardar el producto");
-        }
+        
+        alert(`Producto "${nombre}" guardado (Demo)`);
+        closeModal();
       }
 
-      async function deleteProduct(id) {
+      function deleteProduct(id) {
         if (confirm("¿Seguro que quieres eliminar este premio?")) {
-          try {
-            await _supabase.from("recompensas").delete().eq("id", id);
-            loadCatalog();
-          } catch (error) {
-            console.error("Error deleting product:", error);
-            alert("Error al eliminar el producto");
-          }
+          alert("Producto eliminado (Demo)");
         }
       }
 
@@ -216,30 +194,6 @@
         document.getElementById("p-nombre").value = nombre;
         document.getElementById("p-puntos").value = puntos;
       }
-
-      async function verificarAutenticacion() {
-        const {
-          data: { user },
-        } = await _supabase.auth.getUser();
-        if (!user) {
-          window.location.href = "index.html";
-          return;
-        }
-
-        const { data: profile } = await _supabase
-          .from("profiles")
-          .select("rol")
-          .eq("id", user.id)
-          .single();
-
-        if (!profile || profile.rol !== "admin") {
-          window.location.href = "Usuario.html";
-        } else {
-          loadCatalog();
-        }
-      }
-
-      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>

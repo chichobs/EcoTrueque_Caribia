@@ -97,7 +97,7 @@
             id="count-users"
             class="text-6xl font-headline font-black text-slate-900"
           >
-            ...
+            1,234
           </p>
           <p class="text-slate-400 text-xs mt-4">Usuarios registrados</p>
         </div>
@@ -109,7 +109,7 @@
           >
             Sostenibilidad
           </h3>
-          <p id="total-co2" class="text-6xl font-headline font-black">...</p>
+          <p id="total-co2" class="text-6xl font-headline font-black">5.6</p>
           <p class="opacity-70 text-xs mt-4">Toneladas de CO2 evitadas</p>
         </div>
         <div
@@ -124,71 +124,17 @@
             id="total-kg"
             class="text-6xl font-headline font-black text-slate-900"
           >
-            ...
+            5,678kg
           </p>
           <p class="text-slate-400 text-xs mt-4">Kilogramos procesados</p>
         </div>
       </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
     <script>
-      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      async function loadData() {
-        try {
-          const { count: users, error: usersError } = await _supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true });
-          if (!usersError)
-            document.getElementById("count-users").innerText = users || 0;
-
-          const { data: trueques, error: truequesError } = await _supabase
-            .from("trueques")
-            .select("peso_kg, co2_ahorrado");
-          if (!truequesError) {
-            const kg =
-              trueques?.reduce((acc, c) => acc + (c.peso_kg || 0), 0) || 0;
-            const co2 =
-              trueques?.reduce((acc, c) => acc + (c.co2_ahorrado || 0), 0) || 0;
-            document.getElementById("total-kg").innerText = `${kg}kg`;
-            document.getElementById("total-co2").innerText =
-              `${(co2 / 1000).toFixed(1)}tn`;
-          }
-        } catch (error) {
-          console.error("Error loading data:", error);
-        }
-      }
-
-      async function verificarAutenticacion() {
-        const {
-          data: { user },
-        } = await _supabase.auth.getUser();
-        if (!user) {
-          window.location.href = "index.html";
-          return;
-        }
-
-        const { data: profile } = await _supabase
-          .from("profiles")
-          .select("rol")
-          .eq("id", user.id)
-          .single();
-
-        if (!profile || profile.rol !== "admin") {
-          window.location.href = "Usuario.html";
-        } else {
-          loadData();
-        }
-      }
-
-      async function cerrarSesion() {
-        await _supabase.auth.signOut();
+      function cerrarSesion() {
         window.location.href = "index.html";
       }
-
-      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>

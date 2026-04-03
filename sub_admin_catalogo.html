@@ -75,71 +75,35 @@
       <div
         id="catalog-grid"
         class="grid grid-cols-1 md:grid-cols-3 gap-8"
-      ></div>
+      >
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
+          <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-primary text-sm">redeem</span>
+          </div>
+          <h3 class="font-headline font-black text-xl mb-1 text-slate-900">Botella Reutilizable</h3>
+          <p class="text-primary font-black text-3xl italic">500 <span class="text-xs opacity-40">PTS</span></p>
+        </div>
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
+          <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-primary text-sm">redeem</span>
+          </div>
+          <h3 class="font-headline font-black text-xl mb-1 text-slate-900">Bolsa de Tela</h3>
+          <p class="text-primary font-black text-3xl italic">250 <span class="text-xs opacity-40">PTS</span></p>
+        </div>
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
+          <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-primary text-sm">redeem</span>
+          </div>
+          <h3 class="font-headline font-black text-xl mb-1 text-slate-900">Kit Compostaje</h3>
+          <p class="text-primary font-black text-3xl italic">1,000 <span class="text-xs opacity-40">PTS</span></p>
+        </div>
+      </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
     <script>
-      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      async function loadCatalog() {
-        try {
-          const { data } = await _supabase.from("recompensas").select("*");
-          if (data && data.length > 0) {
-            document.getElementById("catalog-grid").innerHTML = data
-              .map(
-                (r) => `
-                        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
-                            <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                                <span class="material-symbols-outlined text-primary text-sm">redeem</span>
-                            </div>
-                            <h3 class="font-headline font-black text-xl mb-1 text-slate-900">${r.nombre}</h3>
-                            <p class="text-primary font-black text-3xl italic">${r.puntos_requeridos} <span class="text-xs opacity-40">PTS</span></p>
-                        </div>
-                    `,
-              )
-              .join("");
-          } else {
-            document.getElementById("catalog-grid").innerHTML =
-              '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles</div>';
-          }
-        } catch (error) {
-          console.error("Error loading catalog:", error);
-        }
-      }
-
-      async function verificarAutenticacion() {
-        const {
-          data: { user },
-        } = await _supabase.auth.getUser();
-        if (!user) {
-          window.location.href = "index.html";
-          return;
-        }
-
-        const { data: profile } = await _supabase
-          .from("profiles")
-          .select("rol")
-          .eq("id", user.id)
-          .single();
-
-        if (
-          !profile ||
-          (profile.rol !== "subadmin" && profile.rol !== "admin")
-        ) {
-          window.location.href = "Usuario.html";
-        } else {
-          loadCatalog();
-        }
-      }
-
-      async function cerrarSesion() {
-        await _supabase.auth.signOut();
+      function cerrarSesion() {
         window.location.href = "index.html";
       }
-
-      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>

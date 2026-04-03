@@ -52,7 +52,7 @@
         <h1
           class="font-headline font-black text-4xl text-slate-900 mb-2 italic"
         >
-          ¡Hola, <span id="user-name" class="text-primary italic">...</span>!
+          ¡Hola, <span id="user-name" class="text-primary italic">María</span>!
         </h1>
         <p class="text-slate-500 font-medium">
           Este es el impacto de tu compromiso ambiental.
@@ -72,7 +72,7 @@
             <span
               id="user-points"
               class="text-7xl font-headline font-black leading-none"
-              >0</span
+              >1,250</span
             >
             <span class="text-xl font-bold opacity-40 mb-2 tracking-tighter"
               >EcoPuntos</span
@@ -85,7 +85,7 @@
               CO2 Evitado Estimado
             </p>
             <p class="text-xl font-headline font-black text-accent">
-              <span id="user-co2">0.0</span>
+              <span id="user-co2">45.2</span>
               <span class="text-sm italic font-medium">kg</span>
             </p>
           </div>
@@ -142,94 +142,44 @@
       >
         Actividad Reciente
       </h2>
-      <div class="space-y-4" id="user-history"></div>
+      <div class="space-y-4" id="user-history">
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-primary/20 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined text-sm font-bold">recycling</span>
+            </div>
+            <div>
+              <p class="font-bold text-slate-900">Plástico</p>
+              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">15/03/2024</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="font-headline font-black text-primary text-2xl tracking-tighter">+150</p>
+            <p class="text-[10px] font-bold text-slate-300 uppercase italic">15 KG</p>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-primary/20 transition-all">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined text-sm font-bold">recycling</span>
+            </div>
+            <div>
+              <p class="font-bold text-slate-900">Cartón/Papel</p>
+              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">10/03/2024</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="font-headline font-black text-primary text-2xl tracking-tighter">+80</p>
+            <p class="text-[10px] font-bold text-slate-300 uppercase italic">8 KG</p>
+          </div>
+        </div>
+      </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
     <script>
-      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      async function init() {
-        try {
-          const {
-            data: { user },
-            error: userError,
-          } = await _supabase.auth.getUser();
-          if (userError || !user) {
-            window.location.href = "index.html";
-            return;
-          }
-
-          const { data: profile, error: profileError } = await _supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
-
-          if (profileError) throw profileError;
-
-          if (profile) {
-            document.getElementById("user-name").innerText = profile.full_name
-              ? profile.full_name.split(" ")[0]
-              : "Usuario";
-            document.getElementById("user-points").innerText =
-              profile.puntos || 0;
-          }
-
-          const { data: trueques, error: truequesError } = await _supabase
-            .from("trueques")
-            .select("*")
-            .eq("perfil_id", user.id)
-            .order("created_at", { ascending: false });
-
-          if (truequesError) throw truequesError;
-
-          const historyContainer = document.getElementById("user-history");
-          if (trueques && trueques.length > 0) {
-            let co2Total = 0;
-            historyContainer.innerHTML = trueques
-              .map((t) => {
-                const co2Item = t.peso_kg * 0.45;
-                co2Total += co2Item;
-                return `
-                        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-primary/20 transition-all">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary">
-                                    <span class="material-symbols-outlined text-sm font-bold">recycling</span>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-900">${t.material}</p>
-                                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">${new Date(t.created_at).toLocaleDateString()}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-headline font-black text-primary text-2xl tracking-tighter">+${Math.floor(t.peso_kg * 10)}</p>
-                                <p class="text-[10px] font-bold text-slate-300 uppercase italic">${t.peso_kg} KG</p>
-                            </div>
-                        </div>`;
-              })
-              .join("");
-            document.getElementById("user-co2").innerText = co2Total.toFixed(1);
-          } else {
-            historyContainer.innerHTML = `
-                        <div class="bg-white/50 p-12 rounded-[2.5rem] border border-dashed border-slate-200 text-center">
-                            <span class="material-symbols-outlined text-slate-300 text-5xl mb-4">history</span>
-                            <p class="text-slate-400 font-medium">Aún no tienes registros de actividad.</p>
-                        </div>`;
-          }
-        } catch (error) {
-          console.error("Error al cargar datos:", error);
-          alert("Error al cargar los datos. Por favor recarga la página.");
-        }
-      }
-
-      async function cerrarSesion() {
-        await _supabase.auth.signOut();
+      function cerrarSesion() {
         window.location.href = "index.html";
       }
-
-      window.onload = init;
     </script>
   </body>
 </html>
