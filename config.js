@@ -9,7 +9,7 @@ client
     .setEndpoint(APPWRITE_ENDPOINT)
     .setProject(APPWRITE_PROJECT_ID);
 
-const DATABASE_ID = '69cf2810001cabc4f4ba';
+const DATABASE_ID = 'database-69cf2810001cabc4f4ba';
 const COLLECTION_USUARIOS = 'usuarios';
 const COLLECTION_ENTREGAS = 'entregas';
 const COLLECTION_PRODUCTOS = 'productos';
