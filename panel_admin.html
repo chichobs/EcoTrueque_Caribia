@@ -13,6 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -97,7 +98,7 @@
             id="count-users"
             class="text-6xl font-headline font-black text-slate-900"
           >
-            1,234
+            ...
           </p>
           <p class="text-slate-400 text-xs mt-4">Usuarios registrados</p>
         </div>
@@ -109,7 +110,7 @@
           >
             Sostenibilidad
           </h3>
-          <p id="total-co2" class="text-6xl font-headline font-black">5.6</p>
+          <p id="total-co2" class="text-6xl font-headline font-black">...</p>
           <p class="opacity-70 text-xs mt-4">Toneladas de CO2 evitadas</p>
         </div>
         <div
@@ -124,17 +125,58 @@
             id="total-kg"
             class="text-6xl font-headline font-black text-slate-900"
           >
-            5,678kg
+            ...
           </p>
           <p class="text-slate-400 text-xs mt-4">Kilogramos procesados</p>
         </div>
       </div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      function cerrarSesion() {
+      async function loadData() {
+        try {
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS);
+          document.getElementById("count-users").innerText = usuarios.total || 0;
+
+          const entregas = await databases.listDocuments(DATABASE_ID, COLLECTION_ENTREGAS);
+          let totalKG = 0;
+          let totalCO2 = 0;
+          entregas.documents.forEach(entrega => {
+            totalKG += entrega.peso || 0;
+            totalCO2 += (entrega.peso || 0) * 0.45;
+          });
+          document.getElementById("total-kg").innerText = `${totalKG}kg`;
+          document.getElementById("total-co2").innerText = `${(totalCO2 / 1000).toFixed(1)}tn`;
+        } catch (error) {
+          console.error("Error loading data:", error);
+        }
+      }
+
+      async function verificarAutenticacion() {
+        try {
+          const user = await account.get();
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+          if (usuarios.total === 0) window.location.href = "index.html";
+          const perfil = usuarios.documents[0];
+          if (perfil.rol !== "admin") {
+            window.location.href = "Usuario.html";
+          } else {
+            loadData();
+          }
+        } catch (error) {
+          window.location.href = "index.html";
+        }
+      }
+
+      async function cerrarSesion() {
+        await account.deleteSession('current');
         window.location.href = "index.html";
       }
+
+      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>

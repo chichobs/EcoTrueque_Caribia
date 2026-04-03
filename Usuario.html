@@ -13,7 +13,8 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
-    <script id="tailwind-config">
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
+    <script>
       tailwind.config = {
         theme: {
           extend: {
@@ -52,7 +53,7 @@
         <h1
           class="font-headline font-black text-4xl text-slate-900 mb-2 italic"
         >
-          ¡Hola, <span id="user-name" class="text-primary italic">María</span>!
+          ¡Hola, <span id="user-name" class="text-primary italic">...</span>!
         </h1>
         <p class="text-slate-500 font-medium">
           Este es el impacto de tu compromiso ambiental.
@@ -72,7 +73,7 @@
             <span
               id="user-points"
               class="text-7xl font-headline font-black leading-none"
-              >1,250</span
+              >0</span
             >
             <span class="text-xl font-bold opacity-40 mb-2 tracking-tighter"
               >EcoPuntos</span
@@ -85,7 +86,7 @@
               CO2 Evitado Estimado
             </p>
             <p class="text-xl font-headline font-black text-accent">
-              <span id="user-co2">45.2</span>
+              <span id="user-co2">0.0</span>
               <span class="text-sm italic font-medium">kg</span>
             </p>
           </div>
@@ -108,10 +109,10 @@
           </div>
           <div>
             <h3 class="font-headline font-black text-xl text-slate-900 italic">
-              Canjear Premios
+              Ver Premios
             </h3>
             <p class="text-sm text-slate-400">
-              Cambia tus puntos por beneficios
+              Consulta los productos disponibles
             </p>
           </div>
         </a>
@@ -142,44 +143,83 @@
       >
         Actividad Reciente
       </h2>
-      <div class="space-y-4" id="user-history">
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-primary/20 transition-all">
-          <div class="flex items-center gap-4">
-            <div class="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary">
-              <span class="material-symbols-outlined text-sm font-bold">recycling</span>
-            </div>
-            <div>
-              <p class="font-bold text-slate-900">Plástico</p>
-              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">15/03/2024</p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="font-headline font-black text-primary text-2xl tracking-tighter">+150</p>
-            <p class="text-[10px] font-bold text-slate-300 uppercase italic">15 KG</p>
-          </div>
-        </div>
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-primary/20 transition-all">
-          <div class="flex items-center gap-4">
-            <div class="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary">
-              <span class="material-symbols-outlined text-sm font-bold">recycling</span>
-            </div>
-            <div>
-              <p class="font-bold text-slate-900">Cartón/Papel</p>
-              <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">10/03/2024</p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="font-headline font-black text-primary text-2xl tracking-tighter">+80</p>
-            <p class="text-[10px] font-bold text-slate-300 uppercase italic">8 KG</p>
-          </div>
-        </div>
-      </div>
+      <div class="space-y-4" id="user-history"></div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      function cerrarSesion() {
+      let userId = null;
+
+      async function init() {
+        try {
+          const user = await account.get();
+          userId = user.$id;
+
+          // Buscar perfil del usuario
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+
+          if (usuarios.total === 0) {
+            window.location.href = "index.html";
+            return;
+          }
+
+          const perfil = usuarios.documents[0];
+          document.getElementById("user-name").innerText = perfil.username.split(" ")[0] || "Usuario";
+          document.getElementById("user-points").innerText = perfil.puntos || 0;
+
+          // Cargar historial de entregas
+          const entregas = await databases.listDocuments(DATABASE_ID, COLLECTION_ENTREGAS, [
+            Appwrite.Query.equal('cedula', perfil.cedula)
+          ]);
+
+          const historyContainer = document.getElementById("user-history");
+          let co2Total = 0;
+
+          if (entregas.total > 0) {
+            historyContainer.innerHTML = entregas.documents.map(t => {
+              const puntosGanados = Math.floor(t.peso * 10);
+              co2Total += t.peso * 0.45;
+              return `
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm hover:border-primary/20 transition-all">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary">
+                      <span class="material-symbols-outlined text-sm font-bold">recycling</span>
+                    </div>
+                    <div>
+                      <p class="font-bold text-slate-900">${t.material}</p>
+                      <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">${new Date(t.CreatedAt || t.$createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-headline font-black text-primary text-2xl tracking-tighter">+${puntosGanados}</p>
+                    <p class="text-[10px] font-bold text-slate-300 uppercase italic">${t.peso} KG</p>
+                  </div>
+                </div>
+              `;
+            }).join("");
+            document.getElementById("user-co2").innerText = co2Total.toFixed(1);
+          } else {
+            historyContainer.innerHTML = `
+              <div class="bg-white/50 p-12 rounded-[2.5rem] border border-dashed border-slate-200 text-center">
+                <span class="material-symbols-outlined text-slate-300 text-5xl mb-4">history</span>
+                <p class="text-slate-400 font-medium">Aún no tienes registros de actividad.</p>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("Error al cargar datos:", error);
+          window.location.href = "index.html";
+        }
+      }
+
+      async function cerrarSesion() {
+        await account.deleteSession('current');
         window.location.href = "index.html";
       }
+
+      window.onload = init;
     </script>
   </body>
 </html>

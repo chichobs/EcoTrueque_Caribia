@@ -13,6 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -89,7 +90,7 @@
             <span class="material-symbols-outlined text-primary text-sm"
               >location_on</span
             >
-            <span id="nombre-punto-dinamico">Punto Principal</span>
+            <span id="nombre-punto-dinamico">Cargando sede...</span>
           </span>
         </div>
       </header>
@@ -109,7 +110,7 @@
             Recolectado Hoy
           </h3>
           <p class="text-6xl font-headline font-black text-slate-900">
-            <span id="total-kg-hoy">156.5</span>
+            <span id="total-kg-hoy">0.0</span>
             <span class="text-xl opacity-30 italic">KG</span>
           </p>
         </div>
@@ -170,31 +171,106 @@
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-50" id="recent-logs">
-            <tr>
-              <td class="px-8 py-6 font-bold text-slate-700">Plástico</td>
-              <td class="px-8 py-6 text-sm text-slate-500">15/03/2024 10:30 AM</td>
-              <td class="px-8 py-6 text-right font-black text-primary">15 KG</td>
-            </tr>
-            <tr>
-              <td class="px-8 py-6 font-bold text-slate-700">Cartón/Papel</td>
-              <td class="px-8 py-6 text-sm text-slate-500">15/03/2024 09:15 AM</td>
-              <td class="px-8 py-6 text-right font-black text-primary">8 KG</td>
-            </tr>
-            <tr>
-              <td class="px-8 py-6 font-bold text-slate-700">Vidrio</td>
-              <td class="px-8 py-6 text-sm text-slate-500">14/03/2024 04:45 PM</td>
-              <td class="px-8 py-6 text-right font-black text-primary">12 KG</td>
-            </tr>
-          </tbody>
+          <tbody class="divide-y divide-slate-50" id="recent-logs"></tbody>
         </table>
       </div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      function cerrarSesion() {
+      let puntoAsignado = "";
+
+      async function inicializarPanel() {
+        try {
+          const user = await account.get();
+
+          // Buscar perfil del subadmin
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+
+          if (usuarios.total === 0) {
+            window.location.href = "index.html";
+            return;
+          }
+
+          const perfil = usuarios.documents[0];
+          if (perfil.rol !== "subadmin") {
+            window.location.href = "Usuario.html";
+            return;
+          }
+
+          // Determinar punto asignado según el email
+          const email = user.email.toLowerCase();
+          if (email.includes("puntoa")) puntoAsignado = "Punto A";
+          else if (email.includes("puntob")) puntoAsignado = "Punto B";
+          else if (email.includes("puntoc")) puntoAsignado = "Punto C";
+          else puntoAsignado = "Punto Principal";
+
+          document.getElementById("nombre-punto-dinamico").innerText = puntoAsignado;
+
+          await cargarEstadisticas();
+          await cargarUltimosMovimientos();
+        } catch (error) {
+          console.error("Error inicializando panel:", error);
+          window.location.href = "index.html";
+        }
+      }
+
+      async function cargarEstadisticas() {
+        try {
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+
+          const entregas = await databases.listDocuments(DATABASE_ID, COLLECTION_ENTREGAS, [
+            Appwrite.Query.equal('punto', puntoAsignado)
+          ]);
+
+          let totalHoy = 0;
+          entregas.documents.forEach(entrega => {
+            const fechaEntrega = new Date(entrega.CreatedAt || entrega.$createdAt);
+            if (fechaEntrega >= hoy) {
+              totalHoy += entrega.peso || 0;
+            }
+          });
+
+          document.getElementById("total-kg-hoy").innerText = totalHoy.toFixed(1);
+        } catch (error) {
+          console.error("Error cargando estadísticas:", error);
+        }
+      }
+
+      async function cargarUltimosMovimientos() {
+        try {
+          const entregas = await databases.listDocuments(DATABASE_ID, COLLECTION_ENTREGAS, [
+            Appwrite.Query.equal('punto', puntoAsignado),
+            Appwrite.Query.orderDesc('$createdAt'),
+            Appwrite.Query.limit(5)
+          ]);
+
+          const tbody = document.getElementById("recent-logs");
+          if (entregas.total > 0) {
+            tbody.innerHTML = entregas.documents.map(l => `
+              <tr>
+                <td class="px-8 py-6 font-bold text-slate-700">${l.material}</td>
+                <td class="px-8 py-6 text-sm text-slate-500">${new Date(l.$createdAt).toLocaleString()}</td>
+                <td class="px-8 py-6 text-right font-black text-primary">${l.peso} KG</td>
+              </tr>
+            `).join("");
+          } else {
+            tbody.innerHTML = `<tr><td colspan="3" class="px-8 py-10 text-center text-slate-400 font-medium">No hay registros hoy</td></tr>`;
+          }
+        } catch (error) {
+          console.error("Error cargando movimientos:", error);
+        }
+      }
+
+      async function cerrarSesion() {
+        await account.deleteSession('current');
         window.location.href = "index.html";
       }
+
+      window.onload = inicializarPanel;
     </script>
   </body>
 </html>

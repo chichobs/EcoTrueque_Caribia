@@ -12,6 +12,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -41,7 +42,7 @@
           <span
             id="mis-puntos"
             class="font-headline font-black text-primary text-xl"
-            >1,250</span
+            >0</span
           >
         </div>
       </header>
@@ -50,51 +51,62 @@
         Premios <span class="text-primary">Disponibles</span>
       </h1>
       <p class="text-slate-500 mb-12 max-w-xl">
-        Canjea tus EcoPuntos por productos sostenibles y beneficios en comercios
-        aliados.
+        Conoce los productos sostenibles que puedes obtener en nuestra tienda física.
       </p>
 
       <div
         id="grid-recompensas"
         class="grid grid-cols-1 md:grid-cols-3 gap-8"
-      >
-        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col group">
-          <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
-            <span class="material-symbols-outlined">redeem</span>
-          </div>
-          <h3 class="font-headline font-black text-xl text-slate-900 mb-2">Botella Reutilizable</h3>
-          <p class="text-3xl font-headline font-black text-primary mb-8 italic">500 <span class="text-xs opacity-40">ECO</span></p>
-          <button class="mt-auto w-full py-4 rounded-2xl font-bold transition-all bg-primary text-white hover:bg-slate-900 shadow-lg shadow-primary/20">
-            Canjear
-          </button>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col group">
-          <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
-            <span class="material-symbols-outlined">redeem</span>
-          </div>
-          <h3 class="font-headline font-black text-xl text-slate-900 mb-2">Bolsa de Tela</h3>
-          <p class="text-3xl font-headline font-black text-primary mb-8 italic">250 <span class="text-xs opacity-40">ECO</span></p>
-          <button class="mt-auto w-full py-4 rounded-2xl font-bold transition-all bg-primary text-white hover:bg-slate-900 shadow-lg shadow-primary/20">
-            Canjear
-          </button>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col group">
-          <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
-            <span class="material-symbols-outlined">redeem</span>
-          </div>
-          <h3 class="font-headline font-black text-xl text-slate-900 mb-2">Kit Compostaje</h3>
-          <p class="text-3xl font-headline font-black text-primary mb-8 italic">1,000 <span class="text-xs opacity-40">ECO</span></p>
-          <button class="mt-auto w-full py-4 rounded-2xl font-bold transition-all bg-primary text-white hover:bg-slate-900 shadow-lg shadow-primary/20">
-            Canjear
-          </button>
-        </div>
-      </div>
+      ></div>
     </div>
 
+    <script src="config.js"></script>
     <script>
-      function canjearPremio(nombre, puntos) {
-        alert(`🎉 ¡Premio "${nombre}" canjeado con éxito! (Demo)\nPuntos usados: ${puntos}`);
+      async function cargarCatalogo() {
+        try {
+          const user = await account.get();
+
+          // Obtener puntos del usuario
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+
+          let puntosActuales = 0;
+          if (usuarios.total > 0) {
+            puntosActuales = usuarios.documents[0].puntos || 0;
+            document.getElementById("mis-puntos").innerText = puntosActuales;
+          }
+
+          // Cargar productos
+          const productos = await databases.listDocuments(DATABASE_ID, COLLECTION_PRODUCTOS);
+          const grid = document.getElementById("grid-recompensas");
+
+          if (productos.total > 0) {
+            grid.innerHTML = productos.documents.map(p => {
+              const puntosRequeridos = p.puntos || p.price;
+              return `
+                <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col group">
+                  <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined">redeem</span>
+                  </div>
+                  <h3 class="font-headline font-black text-xl text-slate-900 mb-2">${p.nombre || p.productName}</h3>
+                  <p class="text-3xl font-headline font-black text-primary mb-8 italic">${puntosRequeridos} <span class="text-xs opacity-40">ECO</span></p>
+                  <div class="mt-auto w-full py-4 rounded-2xl font-bold text-center bg-slate-100 text-slate-400 cursor-not-allowed">
+                    Canje en tienda física
+                  </div>
+                </div>
+              `;
+            }).join("");
+          } else {
+            grid.innerHTML = '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles por ahora</div>';
+          }
+        } catch (error) {
+          console.error("Error cargando catálogo:", error);
+          window.location.href = "index.html";
+        }
       }
+
+      window.onload = cargarCatalogo;
     </script>
   </body>
 </html>

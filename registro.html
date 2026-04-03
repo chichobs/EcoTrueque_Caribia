@@ -13,7 +13,8 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
-    <script id="tailwind-config">
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
+    <script>
       tailwind.config = {
         theme: {
           extend: {
@@ -75,7 +76,7 @@
                 >recycling</span
               >
               <div id="cont-usuarios" class="text-2xl font-headline font-black">
-                1,234
+                ...
               </div>
               <div class="text-sm text-on-surface-variant">
                 Usuarios activos
@@ -86,7 +87,7 @@
                 >eco</span
               >
               <div id="cont-co2" class="text-2xl font-headline font-black">
-                5.6tn
+                ...
               </div>
               <div class="text-sm text-on-surface-variant">CO2 Ahorrado</div>
             </div>
@@ -158,33 +159,89 @@
       </div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      document
-        .getElementById("registrationForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
+      async function cargarEstadisticas() {
+        try {
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS);
+          document.getElementById("cont-usuarios").innerText = `${usuarios.total}+`;
 
-          const email = document.getElementById("email").value;
-          const password = document.getElementById("password").value;
-          const confirmPassword =
-            document.getElementById("confirm_password").value;
-          const fullName = document.getElementById("full_name").value;
-          const cedula = document.getElementById("cedula").value;
+          const entregas = await databases.listDocuments(DATABASE_ID, COLLECTION_ENTREGAS);
+          let totalKG = 0;
+          entregas.documents.forEach(entrega => {
+            totalKG += entrega.peso || 0;
+          });
+          const co2Ahorrado = (totalKG * 0.45 / 1000).toFixed(1);
+          document.getElementById("cont-co2").innerText = `${co2Ahorrado}tn`;
+        } catch (error) {
+          console.error("Error cargando estadísticas:", error);
+        }
+      }
 
-          if (password !== confirmPassword) {
-            alert("Las contraseñas no coinciden");
+      document.getElementById("registrationForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirm_password").value;
+        const fullName = document.getElementById("full_name").value;
+        const cedula = document.getElementById("cedula").value;
+
+        if (password !== confirmPassword) {
+          alert("Las contraseñas no coinciden");
+          return;
+        }
+
+        if (password.length < 6) {
+          alert("La contraseña debe tener al menos 6 caracteres");
+          return;
+        }
+
+        try {
+          // Verificar si la cédula ya existe
+          const usuariosExistentes = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('cedula', cedula)
+          ]);
+
+          if (usuariosExistentes.total > 0) {
+            alert("Esta cédula ya está registrada en el sistema");
             return;
           }
 
-          if (password.length < 6) {
-            alert("La contraseña debe tener al menos 6 caracteres");
-            return;
-          }
+          // Crear usuario en Auth
+          const newUser = await account.create(
+            Appwrite.ID.unique(),
+            email,
+            password,
+            fullName
+          );
 
-          // Simulación de registro exitoso
-          alert(`¡Registro exitoso!\nBienvenido ${fullName}\nRevisa tu correo para confirmar tu cuenta.`);
+          // Iniciar sesión automáticamente
+          await account.createEmailPasswordSession(email, password);
+
+          // Crear perfil en la colección usuarios
+          await databases.createDocument(
+            DATABASE_ID,
+            COLLECTION_USUARIOS,
+            Appwrite.ID.unique(),
+            {
+              username: fullName,
+              email: email,
+              cedula: cedula,
+              puntos: 0,
+              rol: "user"
+            }
+          );
+
+          alert("¡Registro exitoso! Serás redirigido al inicio de sesión.");
           window.location.href = "index.html";
-        });
+
+        } catch (error) {
+          alert("Error al registrar: " + error.message);
+        }
+      });
+
+      window.onload = cargarEstadisticas;
     </script>
   </body>
 </html>

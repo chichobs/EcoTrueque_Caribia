@@ -13,7 +13,8 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
-    <script id="tailwind-config">
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
+    <script>
       tailwind.config = {
         darkMode: "class",
         theme: {
@@ -97,7 +98,7 @@
               Comunidad
             </p>
             <p id="cont-usuarios" class="text-2xl font-bold font-headline">
-              +1,234 Usuarios
+              Cargando...
             </p>
           </div>
           <div class="p-6 bg-surface-container-high rounded-xl space-y-2">
@@ -111,7 +112,7 @@
               Impacto
             </p>
             <p id="cont-co2" class="text-2xl font-bold font-headline">
-              5,678 Kg Reciclados
+              Cargando...
             </p>
           </div>
         </div>
@@ -216,29 +217,66 @@
       </div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      // Datos de ejemplo estáticos
+      // Cargar estadísticas
+      async function cargarEstadisticas() {
+        try {
+          // Contar usuarios
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS);
+          document.getElementById("cont-usuarios").innerText = `+${usuarios.total} Usuarios`;
+
+          // Calcular CO2 y KG totales
+          const entregas = await databases.listDocuments(DATABASE_ID, COLLECTION_ENTREGAS);
+          let totalKG = 0;
+          entregas.documents.forEach(entrega => {
+            totalKG += entrega.peso || 0;
+          });
+          const co2Ahorrado = (totalKG * 0.45).toFixed(1);
+          document.getElementById("cont-co2").innerText = `${totalKG.toFixed(1)} Kg Reciclados`;
+        } catch (error) {
+          console.error("Error cargando estadísticas:", error);
+        }
+      }
+
+      // Login
       document.getElementById("loginForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
 
-        // Simulación de inicio de sesión
-        alert("Demo: Sistema de autenticación pendiente de conexión.\nEmail: " + email);
-        
-        // Redirección temporal de demo
-        if (email.includes("admin")) {
-          window.location.href = "panel_admin.html";
-        } else if (email.includes("sub")) {
-          window.location.href = "sub_admin.html";
-        } else {
-          window.location.href = "Usuario.html";
+        try {
+          await account.createEmailPasswordSession(email, password);
+          const user = await account.get();
+
+          // Buscar el perfil del usuario en la colección
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', email)
+          ]);
+
+          if (usuarios.total === 0) {
+            alert("Usuario no encontrado en el sistema");
+            await account.deleteSession('current');
+            return;
+          }
+
+          const perfil = usuarios.documents[0];
+          const rol = perfil.rol;
+
+          // Redirigir según el rol
+          if (rol === "admin") {
+            window.location.href = "panel_admin.html";
+          } else if (rol === "subadmin") {
+            window.location.href = "sub_admin.html";
+          } else {
+            window.location.href = "Usuario.html";
+          }
+        } catch (error) {
+          alert("Error al iniciar sesión: " + error.message);
         }
       });
 
-      // Estadísticas de ejemplo
-      document.getElementById("cont-usuarios").innerText = "+1,234 Usuarios";
-      document.getElementById("cont-co2").innerText = "5,678 Kg Reciclados";
+      window.onload = cargarEstadisticas;
     </script>
   </body>
 </html>

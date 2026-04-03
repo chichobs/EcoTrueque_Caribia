@@ -12,6 +12,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -75,35 +76,57 @@
       <div
         id="catalog-grid"
         class="grid grid-cols-1 md:grid-cols-3 gap-8"
-      >
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
-          <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-primary text-sm">redeem</span>
-          </div>
-          <h3 class="font-headline font-black text-xl mb-1 text-slate-900">Botella Reutilizable</h3>
-          <p class="text-primary font-black text-3xl italic">500 <span class="text-xs opacity-40">PTS</span></p>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
-          <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-primary text-sm">redeem</span>
-          </div>
-          <h3 class="font-headline font-black text-xl mb-1 text-slate-900">Bolsa de Tela</h3>
-          <p class="text-primary font-black text-3xl italic">250 <span class="text-xs opacity-40">PTS</span></p>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
-          <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-primary text-sm">redeem</span>
-          </div>
-          <h3 class="font-headline font-black text-xl mb-1 text-slate-900">Kit Compostaje</h3>
-          <p class="text-primary font-black text-3xl italic">1,000 <span class="text-xs opacity-40">PTS</span></p>
-        </div>
-      </div>
+      ></div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      function cerrarSesion() {
+      async function loadCatalog() {
+        try {
+          const productos = await databases.listDocuments(DATABASE_ID, COLLECTION_PRODUCTOS);
+          const grid = document.getElementById("catalog-grid");
+          if (productos.total > 0) {
+            grid.innerHTML = productos.documents.map(p => `
+              <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:scale-[1.02] transition-transform">
+                <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <span class="material-symbols-outlined text-primary text-sm">redeem</span>
+                </div>
+                <h3 class="font-headline font-black text-xl mb-1 text-slate-900">${p.nombre || p.productName}</h3>
+                <p class="text-primary font-black text-3xl italic">${p.puntos || p.price} <span class="text-xs opacity-40">PTS</span></p>
+              </div>
+            `).join("");
+          } else {
+            grid.innerHTML = '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles</div>';
+          }
+        } catch (error) {
+          console.error("Error loading catalog:", error);
+        }
+      }
+
+      async function verificarAutenticacion() {
+        try {
+          const user = await account.get();
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+          if (usuarios.total === 0) window.location.href = "index.html";
+          const perfil = usuarios.documents[0];
+          if (perfil.rol !== "subadmin" && perfil.rol !== "admin") {
+            window.location.href = "Usuario.html";
+          } else {
+            loadCatalog();
+          }
+        } catch (error) {
+          window.location.href = "index.html";
+        }
+      }
+
+      async function cerrarSesion() {
+        await account.deleteSession('current');
         window.location.href = "index.html";
       }
+
+      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>

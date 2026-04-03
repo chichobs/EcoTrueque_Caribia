@@ -12,6 +12,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -63,6 +64,12 @@
           <span>Entregas</span>
         </a>
       </nav>
+      <button
+        onclick="cerrarSesion()"
+        class="flex items-center gap-4 px-6 py-4 rounded-2xl text-red-500 hover:bg-red-50 transition-all font-medium mt-auto"
+      >
+        <span class="material-symbols-outlined">logout</span> Cerrar Sesión
+      </button>
     </aside>
 
     <main class="flex-grow ml-72 p-12">
@@ -81,38 +88,7 @@
       <div
         id="catalog-grid"
         class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
-      >
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-          <h3 class="font-headline font-black text-xl mb-1">Botella Reutilizable</h3>
-          <p class="text-primary font-black text-2xl italic mb-6">500 PTS</p>
-          <div class="flex gap-2">
-            <button onclick="editProduct('1', 'Botella Reutilizable', 500)" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
-            <button onclick="deleteProduct('1')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
-              <span class="material-symbols-outlined">delete</span>
-            </button>
-          </div>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-          <h3 class="font-headline font-black text-xl mb-1">Bolsa de Tela</h3>
-          <p class="text-primary font-black text-2xl italic mb-6">250 PTS</p>
-          <div class="flex gap-2">
-            <button onclick="editProduct('2', 'Bolsa de Tela', 250)" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
-            <button onclick="deleteProduct('2')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
-              <span class="material-symbols-outlined">delete</span>
-            </button>
-          </div>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-          <h3 class="font-headline font-black text-xl mb-1">Kit Compostaje</h3>
-          <p class="text-primary font-black text-2xl italic mb-6">1,000 PTS</p>
-          <div class="flex gap-2">
-            <button onclick="editProduct('3', 'Kit Compostaje', 1000)" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
-            <button onclick="deleteProduct('3')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
-              <span class="material-symbols-outlined">delete</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      ></div>
     </main>
 
     <div
@@ -155,7 +131,33 @@
       </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
+      async function loadCatalog() {
+        try {
+          const productos = await databases.listDocuments(DATABASE_ID, COLLECTION_PRODUCTOS);
+          const grid = document.getElementById("catalog-grid");
+          if (productos.total > 0) {
+            grid.innerHTML = productos.documents.map(p => `
+              <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <h3 class="font-headline font-black text-xl mb-1">${p.nombre || p.productName}</h3>
+                <p class="text-primary font-black text-2xl italic mb-6">${p.puntos || p.price} PTS</p>
+                <div class="flex gap-2">
+                  <button onclick="editProduct('${p.$id}', '${p.nombre || p.productName}', ${p.puntos || p.price})" class="flex-grow bg-slate-50 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors">Editar</button>
+                  <button onclick="deleteProduct('${p.$id}')" class="px-4 bg-red-50 text-red-500 py-3 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              </div>
+            `).join("");
+          } else {
+            grid.innerHTML = '<div class="col-span-full text-center p-12 text-slate-400">No hay premios disponibles</div>';
+          }
+        } catch (error) {
+          console.error("Error loading catalog:", error);
+        }
+      }
+
       function openModal() {
         document.getElementById("modal").classList.remove("hidden");
         document.getElementById("modal-title").innerText = "Nuevo Producto";
@@ -168,22 +170,41 @@
         document.getElementById("modal").classList.add("hidden");
       }
 
-      function saveProduct() {
+      async function saveProduct() {
+        const id = document.getElementById("p-id").value;
         const nombre = document.getElementById("p-nombre").value;
-        const puntos = document.getElementById("p-puntos").value;
-        
+        const puntos = parseInt(document.getElementById("p-puntos").value);
+
         if (!nombre || !puntos) {
           alert("Por favor completa todos los campos");
           return;
         }
-        
-        alert(`Producto "${nombre}" guardado (Demo)`);
-        closeModal();
+
+        try {
+          const data = { nombre: nombre, puntos: puntos };
+
+          if (id) {
+            await databases.updateDocument(DATABASE_ID, COLLECTION_PRODUCTOS, id, data);
+          } else {
+            await databases.createDocument(DATABASE_ID, COLLECTION_PRODUCTOS, Appwrite.ID.unique(), data);
+          }
+          closeModal();
+          loadCatalog();
+        } catch (error) {
+          console.error("Error saving product:", error);
+          alert("Error al guardar el producto");
+        }
       }
 
-      function deleteProduct(id) {
+      async function deleteProduct(id) {
         if (confirm("¿Seguro que quieres eliminar este premio?")) {
-          alert("Producto eliminado (Demo)");
+          try {
+            await databases.deleteDocument(DATABASE_ID, COLLECTION_PRODUCTOS, id);
+            loadCatalog();
+          } catch (error) {
+            console.error("Error deleting product:", error);
+            alert("Error al eliminar el producto");
+          }
         }
       }
 
@@ -194,6 +215,31 @@
         document.getElementById("p-nombre").value = nombre;
         document.getElementById("p-puntos").value = puntos;
       }
+
+      async function verificarAutenticacion() {
+        try {
+          const user = await account.get();
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+          if (usuarios.total === 0) window.location.href = "index.html";
+          const perfil = usuarios.documents[0];
+          if (perfil.rol !== "admin") {
+            window.location.href = "Usuario.html";
+          } else {
+            loadCatalog();
+          }
+        } catch (error) {
+          window.location.href = "index.html";
+        }
+      }
+
+      async function cerrarSesion() {
+        await account.deleteSession('current');
+        window.location.href = "index.html";
+      }
+
+      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>

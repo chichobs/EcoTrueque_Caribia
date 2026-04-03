@@ -13,6 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -64,6 +65,12 @@
           <span>Entregas</span>
         </a>
       </nav>
+      <button
+        onclick="cerrarSesion()"
+        class="flex items-center gap-4 px-6 py-4 rounded-2xl text-red-500 hover:bg-red-50 transition-all font-medium mt-auto"
+      >
+        <span class="material-symbols-outlined">logout</span> Cerrar Sesión
+      </button>
     </aside>
 
     <main class="flex-grow ml-72 p-12">
@@ -172,8 +179,7 @@
                 10 PTS <span class="text-sm opacity-60">por KG</span>
               </p>
               <p class="text-[11px] opacity-70 leading-relaxed font-medium">
-                El sistema calcula automáticamente los puntos y el CO2 ahorrado
-                según el peso ingresado.
+                El sistema calcula automáticamente los puntos según el peso ingresado.
               </p>
             </div>
             <span
@@ -185,237 +191,83 @@
       </div>
     </main>
 
+    <script src="config.js"></script>
     <script>
-      function processRecycling() {
+      async function processRecycling() {
         const ci = document.getElementById("user-ci").value;
         const kg = parseFloat(document.getElementById("weight-kg").value);
         const mat = document.getElementById("mat-type").value;
         const loc = document.getElementById("point-location").value;
 
-        if (!ci || !kg) {
-          alert("Por favor completa los campos de cédula y peso.");
-          return;
-        }
-        if (isNaN(kg) || kg <= 0) {
-          alert("Por favor ingresa un peso válido mayor a 0.");
-          return;
-        }
+        if (!ci || !kg) return alert("Por favor completa los campos de cédula y peso.");
+        if (isNaN(kg) || kg <= 0) return alert("Por favor ingresa un peso válido mayor a 0.");
 
-        const ptsToAdd = Math.floor(kg * 10);
-        
-        alert(`✅ Registro exitoso (Demo)\nMaterial: ${mat}\nPeso: ${kg} KG\nPuntos sumados: ${ptsToAdd}\nPunto: ${loc}`);
-        location.reload();
+        try {
+          const ciLimpia = ci.replace(/[-\s]/g, "").toUpperCase();
+
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('cedula', ciLimpia)
+          ]);
+
+          if (usuarios.total === 0) {
+            return alert("Error: Cédula no encontrada en el sistema.");
+          }
+
+          const usuario = usuarios.documents[0];
+          const ptsToAdd = Math.floor(kg * 10);
+          const nuevosPuntos = (usuario.puntos || 0) + ptsToAdd;
+
+          await databases.updateDocument(
+            DATABASE_ID,
+            COLLECTION_USUARIOS,
+            usuario.$id,
+            { puntos: nuevosPuntos }
+          );
+
+          await databases.createDocument(
+            DATABASE_ID,
+            COLLECTION_ENTREGAS,
+            Appwrite.ID.unique(),
+            {
+              userID: usuario.$id,
+              cedula: ciLimpia,
+              material: mat,
+              peso: kg,
+              puntosGanados: ptsToAdd,
+              punto: loc
+            }
+          );
+
+          alert(`✅ Registro exitoso\nUsuario: ${usuario.username}\nPuntos sumados: ${ptsToAdd}`);
+          location.reload();
+        } catch (error) {
+          console.error("Error al procesar registro:", error);
+          alert("Ocurrió un error al procesar el registro. Por favor intenta de nuevo.");
+        }
       }
-    </script>
-  </body>
-</html><!doctype html>
-<html class="light" lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>EcoCanje Admin - Recepción de Materiales</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      rel="stylesheet"
-    />
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: { primary: "#006a2b", surface: "#f6f7f6" },
-            fontFamily: { headline: ["Manrope"], body: ["Inter"] },
-          },
-        },
-      };
-    </script>
-  </head>
-  <body class="bg-surface font-body flex min-h-screen">
-    <aside
-      class="w-72 bg-white border-r border-slate-100 p-8 flex flex-col fixed h-full z-30"
-    >
-      <div class="mb-12 flex items-center gap-2 text-primary">
-        <span class="material-symbols-outlined text-4xl">recycling</span>
-        <span class="font-headline font-black text-2xl tracking-tighter"
-          >EcoCanje</span
-        >
-      </div>
-      <nav class="space-y-3 flex-grow">
-        <a
-          href="panel_admin.html"
-          class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-slate-50 transition-all font-medium"
-        >
-          <span class="material-symbols-outlined">dashboard</span>
-          <span>Panel</span>
-        </a>
-        <a
-          href="gestion_usuarios.html"
-          class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-slate-50 transition-all font-medium"
-        >
-          <span class="material-symbols-outlined">group</span>
-          <span>Usuarios</span>
-        </a>
-        <a
-          href="gestion_catalogo.html"
-          class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-slate-50 transition-all font-medium"
-        >
-          <span class="material-symbols-outlined">inventory_2</span>
-          <span>Catálogo</span>
-        </a>
-        <a
-          href="gestion_entrega.html"
-          class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 font-bold"
-        >
-          <span class="material-symbols-outlined">local_shipping</span>
-          <span>Entregas</span>
-        </a>
-      </nav>
-    </aside>
 
-    <main class="flex-grow ml-72 p-12">
-      <header class="mb-12">
-        <p
-          class="text-primary font-bold text-xs uppercase tracking-widest mb-2 opacity-60"
-        >
-          Terminal de Recepción
-        </p>
-        <h1 class="font-headline font-black text-5xl text-slate-900">
-          Registro de <span class="text-primary italic">Reciclaje</span>
-        </h1>
-      </header>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div
-          class="lg:col-span-2 bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100"
-        >
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="space-y-6">
-              <div>
-                <label
-                  class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3 px-1"
-                  >Cédula del Ciudadano</label
-                >
-                <input
-                  id="user-ci"
-                  type="text"
-                  placeholder="V-00.000.000"
-                  class="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold focus:ring-4 focus:ring-primary/10 transition-all"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3 px-1"
-                  >Material Recibido</label
-                >
-                <select
-                  id="mat-type"
-                  class="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold focus:ring-4 focus:ring-primary/10 appearance-none text-slate-700"
-                >
-                  <option value="Plástico">♻️ Plástico (PET/PEAD)</option>
-                  <option value="Cartón/Papel">📦 Cartón o Papel</option>
-                  <option value="Hierro">🔩 Hierro / Metales</option>
-                  <option value="Vidrio">🍾 Vidrio</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="space-y-6">
-              <div>
-                <label
-                  class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3 px-1"
-                  >Punto de Recolección</label
-                >
-                <select
-                  id="point-location"
-                  class="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold focus:ring-4 focus:ring-primary/10 appearance-none"
-                >
-                  <option value="Punto A">📍 Punto A (Sede Principal)</option>
-                  <option value="Punto B">📍 Punto B (Plaza)</option>
-                  <option value="Punto C">📍 Punto C (Zona Industrial)</option>
-                </select>
-              </div>
-              <div>
-                <label
-                  class="block text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3 px-1"
-                  >Peso en Kilogramos</label
-                >
-                <div class="relative">
-                  <input
-                    id="weight-kg"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    class="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-black text-2xl text-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                  <span
-                    class="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-300"
-                    >KG</span
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onclick="processRecycling()"
-            class="w-full mt-10 bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-primary hover:scale-[1.01] transition-all shadow-xl shadow-slate-900/10"
-          >
-            Registrar y Validar Puntos
-          </button>
-        </div>
-
-        <div class="space-y-8">
-          <div
-            class="bg-primary text-white p-8 rounded-[2.5rem] shadow-xl shadow-primary/20 relative overflow-hidden group"
-          >
-            <div class="relative z-10">
-              <h3
-                class="opacity-70 font-bold uppercase text-[10px] tracking-widest mb-4"
-              >
-                Factor de Conversión
-              </h3>
-              <p class="text-3xl font-headline font-black mb-2">
-                10 PTS <span class="text-sm opacity-60">por KG</span>
-              </p>
-              <p class="text-[11px] opacity-70 leading-relaxed font-medium">
-                El sistema calcula automáticamente los puntos y el CO2 ahorrado
-                según el peso ingresado.
-              </p>
-            </div>
-            <span
-              class="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl opacity-10 group-hover:rotate-12 transition-transform"
-              >eco</span
-            >
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <script>
-      function processRecycling() {
-        const ci = document.getElementById("user-ci").value;
-        const kg = parseFloat(document.getElementById("weight-kg").value);
-        const mat = document.getElementById("mat-type").value;
-        const loc = document.getElementById("point-location").value;
-
-        if (!ci || !kg) {
-          alert("Por favor completa los campos de cédula y peso.");
-          return;
+      async function verificarAutenticacion() {
+        try {
+          const user = await account.get();
+          const usuarios = await databases.listDocuments(DATABASE_ID, COLLECTION_USUARIOS, [
+            Appwrite.Query.equal('email', user.email)
+          ]);
+          if (usuarios.total === 0) window.location.href = "index.html";
+          const perfil = usuarios.documents[0];
+          if (perfil.rol !== "admin") {
+            window.location.href = "Usuario.html";
+          }
+        } catch (error) {
+          window.location.href = "index.html";
         }
-        if (isNaN(kg) || kg <= 0) {
-          alert("Por favor ingresa un peso válido mayor a 0.");
-          return;
-        }
-
-        const ptsToAdd = Math.floor(kg * 10);
-        
-        alert(`✅ Registro exitoso (Demo)\nMaterial: ${mat}\nPeso: ${kg} KG\nPuntos sumados: ${ptsToAdd}\nPunto: ${loc}`);
-        location.reload();
       }
+
+      async function cerrarSesion() {
+        await account.deleteSession('current');
+        window.location.href = "index.html";
+      }
+
+      window.onload = verificarAutenticacion;
     </script>
   </body>
 </html>
