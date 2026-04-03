@@ -1,5 +1,5 @@
-const APPWRITE_ENDPOINT = 'https://nyc.cloud.appwrite.io/v1';
 const APPWRITE_PROJECT_ID = '69cf25d0a03e524341de';
+const APPWRITE_ENDPOINT = 'https://nyc.cloud.appwrite.io/v1';
 
 const client = new Appwrite.Client();
 const account = new Appwrite.Account(client);
