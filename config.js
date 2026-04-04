@@ -9,25 +9,15 @@ async function cerrarSesion() {
   window.location.href = "index.html";
 }
 
-async function verificarAutenticacion(rolesPermitidos = null) {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error || !user) {
-    window.location.href = "index.html";
-    return null;
-  }
+async function obtenerUsuarioActual() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
   
   const { data: perfil } = await supabase
     .from('perfiles')
-    .select('rol')
+    .select('*')
     .eq('id', user.id)
     .single();
-  
-  if (rolesPermitidos && !rolesPermitidos.includes(perfil?.rol)) {
-    alert("No tienes permiso");
-    window.location.href = "Usuario.html";
-    return null;
-  }
-  
+    
   return { ...user, ...perfil };
 }
