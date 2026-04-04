@@ -5,7 +5,6 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Ingresar | EcoTrueque</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -217,10 +216,17 @@
       </div>
     </main>
 
+    <!-- IMPORTANTE: Orden correcto de scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script>
       async function cargarEstadisticas() {
         try {
+          if (typeof supabase === 'undefined') {
+            console.error("supabase no está definido");
+            return;
+          }
+          
           const { count: usuarios } = await supabase
             .from('perfiles')
             .select('*', { count: 'exact', head: true });
@@ -229,15 +235,13 @@
             .from('entregas')
             .select('peso_kg');
           
-          const totalKg = entregas?.reduce((sum, e) => sum + e.peso_kg, 0) || 0;
+          const totalKg = entregas?.reduce((sum, e) => sum + (e.peso_kg || 0), 0) || 0;
           const co2Evitado = (totalKg * 0.45).toFixed(1);
           
           document.getElementById("cont-usuarios").innerText = `+${usuarios || 0} Usuarios`;
           document.getElementById("cont-co2").innerText = `${co2Evitado} Kg Reciclados`;
         } catch (error) {
           console.error("Error cargando estadísticas:", error);
-          document.getElementById("cont-usuarios").innerText = "+Cargando...";
-          document.getElementById("cont-co2").innerText = "Cargando...";
         }
       }
 
@@ -247,6 +251,10 @@
         const password = document.getElementById("password").value;
 
         try {
+          if (typeof supabase === 'undefined' || !supabase.auth) {
+            throw new Error("Error de conexión. Recarga la página.");
+          }
+          
           const { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
@@ -272,7 +280,7 @@
         }
       });
 
-      window.onload = cargarEstadisticas;
+      window.addEventListener('DOMContentLoaded', cargarEstadisticas);
     </script>
   </body>
 </html>
