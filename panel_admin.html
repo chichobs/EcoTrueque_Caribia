@@ -1,0 +1,100 @@
+<!doctype html>
+<html class="light" lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>EcoTrueque Admin - Panel de Impacto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { primary: "#006a2b", surface: "#f6f7f6" },
+            fontFamily: { headline: ["Manrope"], body: ["Inter"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-surface font-body flex min-h-screen">
+    <aside class="w-72 bg-white border-r border-slate-100 p-8 flex flex-col fixed h-full z-30">
+      <div class="mb-12 flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined text-4xl">recycling</span>
+        <span class="font-headline font-black text-2xl tracking-tighter">EcoTrueque</span>
+      </div>
+      <nav class="space-y-3 flex-grow">
+        <a href="panel_admin.html" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+          <span class="material-symbols-outlined">dashboard</span><span class="font-bold">Panel</span>
+        </a>
+        <a href="gestion_usuarios.html" class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-slate-50 transition-all font-medium">
+          <span class="material-symbols-outlined">group</span><span>Usuarios</span>
+        </a>
+        <a href="gestion_catalogo.html" class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-slate-50 transition-all font-medium">
+          <span class="material-symbols-outlined">inventory_2</span><span>Catálogo</span>
+        </a>
+        <a href="gestion_entrega.html" class="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-slate-50 transition-all font-medium">
+          <span class="material-symbols-outlined">local_shipping</span><span>Entregas</span>
+        </a>
+      </nav>
+      <button onclick="cerrarSesion()" class="flex items-center gap-4 px-6 py-4 rounded-2xl text-red-500 hover:bg-red-50 transition-all font-medium mt-auto">
+        <span class="material-symbols-outlined">logout</span> Cerrar Sesión
+      </button>
+    </aside>
+
+    <main class="flex-grow ml-72 p-12">
+      <header class="mb-12">
+        <p class="text-primary font-bold text-xs uppercase tracking-widest mb-2 opacity-60">Administración Global</p>
+        <h1 class="font-headline font-black text-5xl text-slate-900">Panel de <span class="text-primary italic">Impacto</span></h1>
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-50">
+          <h3 class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-6">Comunidad</h3>
+          <p id="count-users" class="text-6xl font-headline font-black text-slate-900">...</p>
+          <p class="text-slate-400 text-xs mt-4">Usuarios registrados</p>
+        </div>
+        <div class="bg-primary text-white p-10 rounded-[2.5rem] shadow-xl shadow-primary/20">
+          <h3 class="opacity-70 font-bold uppercase text-[10px] tracking-widest mb-6">Sostenibilidad</h3>
+          <p id="total-co2" class="text-6xl font-headline font-black">...</p>
+          <p class="opacity-70 text-xs mt-4">Toneladas de CO2 evitadas</p>
+        </div>
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-50">
+          <h3 class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-6">Reciclaje</h3>
+          <p id="total-kg" class="text-6xl font-headline font-black text-slate-900">...</p>
+          <p class="text-slate-400 text-xs mt-4">Kilogramos procesados</p>
+        </div>
+      </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script>
+      async function loadData() {
+        const { count: usuarios } = await supabase.from('perfiles').select('*', { count: 'exact', head: true });
+        const { data: entregas } = await supabase.from('entregas').select('peso_kg');
+        const totalKg = entregas?.reduce((sum, e) => sum + e.peso_kg, 0) || 0;
+        const co2Total = (totalKg * 0.45 / 1000).toFixed(2);
+        
+        document.getElementById("count-users").innerText = (usuarios || 0).toLocaleString();
+        document.getElementById("total-kg").innerHTML = `${totalKg.toLocaleString()}<span class="text-2xl">kg</span>`;
+        document.getElementById("total-co2").innerHTML = `${co2Total}<span class="text-2xl">tn</span>`;
+      }
+
+      async function verificarAutenticacion() {
+        const usuario = await verificarAutenticacion(['admin']);
+        if (!usuario) return;
+        loadData();
+      }
+
+      window.onload = verificarAutenticacion;
+    </script>
+  </body>
+</html>

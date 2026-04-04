@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>EcoTrueque - Registro</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#006a2b",
+              "primary-dim": "#005d25",
+              background: "#f6f7f6",
+              surface: "#f6f7f6",
+              "on-surface": "#2c2f2f",
+              "on-surface-variant": "#595c5b",
+              "primary-container": "#72fe8f",
+              "surface-container-low": "#eff1f0",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#cfffcf",
+            },
+            fontFamily: { headline: ["Manrope"], body: ["Inter"] },
+          },
+        },
+      };
+    </script>
+    <style>
+      .glass-card {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(20px);
+      }
+    </style>
+  </head>
+  <body class="bg-background font-body text-on-surface">
+    <main
+      class="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
+    >
+      <div
+        class="absolute -top-24 -left-24 w-96 h-96 bg-primary-container/20 rounded-full blur-3xl"
+      ></div>
+
+      <div
+        class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10"
+      >
+        <div class="hidden lg:flex flex-col space-y-8">
+          <div>
+            <span
+              class="inline-block py-1 px-4 rounded-full bg-primary-container text-on-primary-container text-sm mb-6"
+              >Únete al cambio</span
+            >
+            <h1
+              class="font-headline font-extrabold text-6xl text-primary tracking-tighter leading-none mb-4"
+            >
+              EcoTrueque
+            </h1>
+            <p
+              class="font-headline text-3xl text-on-surface-variant font-bold max-w-md"
+            >
+              Transforma tus residuos en valor real.
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="glass-card p-6 rounded-lg">
+              <span class="material-symbols-outlined text-primary mb-3"
+                >recycling</span
+              >
+              <div id="cont-usuarios" class="text-2xl font-headline font-black">
+                ...
+              </div>
+              <div class="text-sm text-on-surface-variant">
+                Usuarios activos
+              </div>
+            </div>
+            <div class="glass-card p-6 rounded-lg mt-8">
+              <span class="material-symbols-outlined text-primary mb-3"
+                >eco</span
+              >
+              <div id="cont-co2" class="text-2xl font-headline font-black">
+                ...
+              </div>
+              <div class="text-sm text-on-surface-variant">CO2 Ahorrado</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="w-full">
+          <div
+            class="bg-surface-container-lowest p-8 md:p-12 rounded-xl shadow-xl"
+          >
+            <h2 class="font-headline text-3xl font-bold mb-6">
+              Crea tu cuenta
+            </h2>
+            <form id="registrationForm" class="space-y-6">
+              <input
+                required
+                id="full_name"
+                class="w-full bg-surface-container-low border-none rounded-sm px-4 py-3"
+                type="text"
+                placeholder="Nombre Completo"
+              />
+              <input
+                required
+                id="cedula"
+                class="w-full bg-surface-container-low border-none rounded-sm px-4 py-3"
+                type="text"
+                placeholder="Cédula"
+              />
+              <input
+                required
+                id="email"
+                class="w-full bg-surface-container-low border-none rounded-sm px-4 py-3"
+                type="email"
+                placeholder="Correo Electrónico"
+              />
+              <div class="grid grid-cols-2 gap-4">
+                <input
+                  required
+                  id="password"
+                  class="w-full bg-surface-container-low border-none rounded-sm px-4 py-3"
+                  type="password"
+                  placeholder="Contraseña"
+                />
+                <input
+                  required
+                  id="confirm_password"
+                  class="w-full bg-surface-container-low border-none rounded-sm px-4 py-3"
+                  type="password"
+                  placeholder="Confirmar"
+                />
+              </div>
+              <button
+                class="w-full py-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary font-bold rounded-full shadow-lg hover:scale-[1.02] transition-all"
+                type="submit"
+              >
+                Unirme a la Comunidad
+              </button>
+            </form>
+            <p class="mt-8 text-center text-on-surface-variant">
+              ¿Ya tienes cuenta?
+              <a
+                class="text-primary font-bold hover:underline"
+                href="index.html"
+                >Inicia sesión</a
+              >
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script>
+      async function cargarEstadisticas() {
+        try {
+          const { count: usuarios } = await supabase
+            .from('perfiles')
+            .select('*', { count: 'exact', head: true });
+          
+          const { data: entregas } = await supabase
+            .from('entregas')
+            .select('peso_kg');
+          
+          const totalKg = entregas?.reduce((sum, e) => sum + e.peso_kg, 0) || 0;
+          const co2Evitado = (totalKg * 0.45).toFixed(1);
+          
+          document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
+          document.getElementById("cont-co2").innerText = `${co2Evitado}kg`;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      document.getElementById("registrationForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirm_password").value;
+        const fullName = document.getElementById("full_name").value;
+        const cedula = document.getElementById("cedula").value;
+
+        if (password !== confirmPassword) {
+          alert("Las contraseñas no coinciden");
+          return;
+        }
+
+        if (password.length < 6) {
+          alert("La contraseña debe tener al menos 6 caracteres");
+          return;
+        }
+
+        try {
+          const { data: authData, error: signUpError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+          });
+          
+          if (signUpError) throw signUpError;
+          
+          if (!authData.user) {
+            throw new Error("Error al crear usuario");
+          }
+          
+          const { error: profileError } = await supabase
+            .from('perfiles')
+            .insert({
+              id: authData.user.id,
+              nombre_completo: fullName,
+              cedula: cedula,
+              puntos: 0,
+              co2_ahorrado: 0,
+              rol: 'user'
+            });
+            
+          if (profileError) throw profileError;
+          
+          alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
+          window.location.href = "index.html";
+        } catch (error) {
+          alert("Error: " + error.message);
+        }
+      });
+
+      window.onload = cargarEstadisticas;
+    </script>
+  </body>
+</html>
