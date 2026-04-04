@@ -158,32 +158,33 @@
       </div>
     </main>
 
-    <!-- IMPORTANTE: Primero Supabase CDN, luego config.js, luego el código -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
+    <!-- USAR VERSIÓN ESPECÍFICA DE SUPABASE (no la última) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    
     <script>
-      // Esta función se ejecuta después de que supabase está inicializado
+      // Configuración
+      const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
+      const SUPABASE_ANON_KEY = "Sb_publishable_3d_8LCaFvtP9Dlergn3LRQ_27ZI1N8w";
+      
+      // Crear cliente
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      
+      console.log("✅ Supabase versión 2.39.0");
+      console.log("supabase.auth existe?", typeof supabase.auth !== 'undefined');
+      console.log("supabase.from existe?", typeof supabase.from === 'function');
+    </script>
+    
+    <script>
+      // Estadísticas
       async function cargarEstadisticas() {
         try {
-          // Verificar que supabase existe
-          if (typeof supabase === 'undefined') {
-            console.error("supabase no está definido");
-            document.getElementById("cont-usuarios").innerText = "Error de conexión";
-            document.getElementById("cont-co2").innerText = "Error";
-            return;
-          }
-          
-          const { count: usuarios, error: countError } = await supabase
+          const { count: usuarios } = await supabase
             .from('perfiles')
             .select('*', { count: 'exact', head: true });
           
-          if (countError) throw countError;
-          
-          const { data: entregas, error: entregasError } = await supabase
+          const { data: entregas } = await supabase
             .from('entregas')
             .select('peso_kg');
-            
-          if (entregasError) throw entregasError;
           
           const totalKg = entregas?.reduce((sum, e) => sum + (e.peso_kg || 0), 0) || 0;
           const co2Evitado = (totalKg * 0.45).toFixed(1);
@@ -191,12 +192,13 @@
           document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
           document.getElementById("cont-co2").innerText = `${co2Evitado}kg`;
         } catch (error) {
-          console.error("Error cargando estadísticas:", error);
+          console.error("Error:", error);
           document.getElementById("cont-usuarios").innerText = "Cargando...";
           document.getElementById("cont-co2").innerText = "Cargando...";
         }
       }
-
+      
+      // Registro
       document.getElementById("registrationForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -217,11 +219,6 @@
         }
 
         try {
-          // Verificar que supabase existe
-          if (typeof supabase === 'undefined' || !supabase.auth) {
-            throw new Error("Error de conexión con Supabase. Recarga la página.");
-          }
-          
           const { data: authData, error: signUpError } = await supabase.auth.signUp({
             email: email,
             password: password,
@@ -248,16 +245,14 @@
           
           alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
           window.location.href = "index.html";
+          
         } catch (error) {
-          console.error("Error detallado:", error);
+          console.error("Error:", error);
           alert("Error: " + error.message);
         }
       });
-
-      // Esperar a que todo esté listo
-      window.addEventListener('DOMContentLoaded', function() {
-        cargarEstadisticas();
-      });
+      
+      cargarEstadisticas();
     </script>
   </body>
 </html>
