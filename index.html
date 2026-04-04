@@ -214,18 +214,24 @@
           </div>
         </div>
       </div>
-      
-<!-- Cambia esta línea en index.html por la versión 1.35.3 -->
-<script src="https://unpkg.com/@supabase/supabase-js@1.35.3/dist/umd/supabase.js"></script>
-    <script src="config.js"></script>
+    </main>
+
+    <!-- Cargar Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script>
+      // Configuración
+      const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
+      
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      
+      console.log("✅ Supabase cargado");
+      console.log("Versión:", window.supabase.version);
+      
+      // Función para cargar estadísticas
       async function cargarEstadisticas() {
         try {
-          if (typeof supabase === 'undefined') {
-            console.error("supabase no está definido");
-            return;
-          }
-          
           const { count: usuarios } = await supabase
             .from('perfiles')
             .select('*', { count: 'exact', head: true });
@@ -240,20 +246,24 @@
           document.getElementById("cont-usuarios").innerText = `+${usuarios || 0} Usuarios`;
           document.getElementById("cont-co2").innerText = `${co2Evitado} Kg Reciclados`;
         } catch (error) {
-          console.error("Error cargando estadísticas:", error);
+          console.error("Error:", error);
         }
       }
-
+      
+      // Login - Usando la sintaxis correcta para la versión 2.x
       document.getElementById("loginForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+        
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+        
+        // Deshabilitar botón
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Ingresando...</span>';
 
         try {
-          if (typeof supabase === 'undefined' || !supabase.auth) {
-            throw new Error("Error de conexión. Recarga la página.");
-          }
-          
+          // Método correcto para Supabase v2
           const { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
@@ -261,25 +271,39 @@
           
           if (error) throw error;
           
-          const { data: perfil } = await supabase
-            .from('perfiles')
-            .select('rol')
-            .eq('id', data.user.id)
-            .single();
-          
-          if (perfil.rol === 'admin') {
-            window.location.href = "panel_admin.html";
-          } else if (perfil.rol === 'subadmin') {
-            window.location.href = "sub_admin.html";
+          if (data.user) {
+            // Obtener el rol del usuario desde la tabla perfiles
+            const { data: perfil, error: perfilError } = await supabase
+              .from('perfiles')
+              .select('rol')
+              .eq('id', data.user.id)
+              .single();
+            
+            if (perfilError) {
+              console.warn("Error obteniendo perfil:", perfilError);
+              // Si no hay perfil, redirigir a usuario normal
+              window.location.href = "Usuario.html";
+            } else if (perfil.rol === 'admin') {
+              window.location.href = "panel_admin.html";
+            } else if (perfil.rol === 'subadmin') {
+              window.location.href = "sub_admin.html";
+            } else {
+              window.location.href = "Usuario.html";
+            }
           } else {
-            window.location.href = "Usuario.html";
+            throw new Error("No se pudo iniciar sesión");
           }
+          
         } catch (error) {
+          console.error("Error login:", error);
           alert("Error al iniciar sesión: " + error.message);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Ingresar</span><span class="material-symbols-outlined">arrow_forward</span>';
         }
       });
-
-      window.addEventListener('DOMContentLoaded', cargarEstadisticas);
+      
+      // Inicializar
+      cargarEstadisticas();
     </script>
   </body>
 </html>
