@@ -5,7 +5,6 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>EcoTrueque - Registro</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -159,25 +158,42 @@
       </div>
     </main>
 
+    <!-- IMPORTANTE: Primero Supabase CDN, luego config.js, luego el código -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script>
+      // Esta función se ejecuta después de que supabase está inicializado
       async function cargarEstadisticas() {
         try {
-          const { count: usuarios } = await supabase
+          // Verificar que supabase existe
+          if (typeof supabase === 'undefined') {
+            console.error("supabase no está definido");
+            document.getElementById("cont-usuarios").innerText = "Error de conexión";
+            document.getElementById("cont-co2").innerText = "Error";
+            return;
+          }
+          
+          const { count: usuarios, error: countError } = await supabase
             .from('perfiles')
             .select('*', { count: 'exact', head: true });
           
-          const { data: entregas } = await supabase
+          if (countError) throw countError;
+          
+          const { data: entregas, error: entregasError } = await supabase
             .from('entregas')
             .select('peso_kg');
+            
+          if (entregasError) throw entregasError;
           
-          const totalKg = entregas?.reduce((sum, e) => sum + e.peso_kg, 0) || 0;
+          const totalKg = entregas?.reduce((sum, e) => sum + (e.peso_kg || 0), 0) || 0;
           const co2Evitado = (totalKg * 0.45).toFixed(1);
           
           document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
           document.getElementById("cont-co2").innerText = `${co2Evitado}kg`;
         } catch (error) {
-          console.error(error);
+          console.error("Error cargando estadísticas:", error);
+          document.getElementById("cont-usuarios").innerText = "Cargando...";
+          document.getElementById("cont-co2").innerText = "Cargando...";
         }
       }
 
@@ -201,6 +217,11 @@
         }
 
         try {
+          // Verificar que supabase existe
+          if (typeof supabase === 'undefined' || !supabase.auth) {
+            throw new Error("Error de conexión con Supabase. Recarga la página.");
+          }
+          
           const { data: authData, error: signUpError } = await supabase.auth.signUp({
             email: email,
             password: password,
@@ -228,11 +249,15 @@
           alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
           window.location.href = "index.html";
         } catch (error) {
+          console.error("Error detallado:", error);
           alert("Error: " + error.message);
         }
       });
 
-      window.onload = cargarEstadisticas;
+      // Esperar a que todo esté listo
+      window.addEventListener('DOMContentLoaded', function() {
+        cargarEstadisticas();
+      });
     </script>
   </body>
 </html>
