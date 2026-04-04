@@ -1,50 +1,33 @@
+// config.js
 const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Función para obtener usuario actual y su perfil
-async function obtenerUsuarioActual() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-    
-  return { ...user, ...perfil };
-}
-
-// Función para obtener el rol del usuario actual
-async function obtenerRolActual() {
-  const usuario = await obtenerUsuarioActual();
-  return usuario?.rol || null;
-}
-
-// Función para cerrar sesión
 async function cerrarSesion() {
   await supabase.auth.signOut();
   window.location.href = "index.html";
 }
 
-// Verificar autenticación (proteger páginas)
 async function verificarAutenticacion(rolesPermitidos = null) {
-  const usuario = await obtenerUsuarioActual();
+  const { data: { user }, error } = await supabase.auth.getUser();
   
-  if (!usuario) {
+  if (error || !user) {
     window.location.href = "index.html";
     return null;
   }
   
-  if (rolesPermitidos && !rolesPermitidos.includes(usuario.rol)) {
-    alert("No tienes permiso para acceder a esta página");
-    if (usuario.rol === 'admin') window.location.href = "panel_admin.html";
-    else if (usuario.rol === 'subadmin') window.location.href = "sub_admin.html";
-    else window.location.href = "Usuario.html";
+  const { data: perfil } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', user.id)
+    .single();
+  
+  if (rolesPermitidos && !rolesPermitidos.includes(perfil?.rol)) {
+    alert("No tienes permiso");
+    window.location.href = "Usuario.html";
     return null;
   }
   
-  return usuario;
+  return { ...user, ...perfil };
 }
