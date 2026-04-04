@@ -1,6 +1,6 @@
 // config.js - Configuración de Supabase
 const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
-const SUPABASE_ANON_KEY = "Sb_publishable_3d_8LCaFvtP9Dlergn3LRQ_27ZI1N8w";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
 
 // Inicializar cliente Supabase
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
