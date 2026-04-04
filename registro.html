@@ -158,104 +158,102 @@
       </div>
     </main>
 
-    <!-- ⚠️ VERSIÓN CORRECTA DE SUPABASE - Usar la versión 1.35.3 que es más estable -->
-    <script src="https://unpkg.com/@supabase/supabase-js@1.35.3/dist/umd/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-      const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
-      // Inicializar Supabase con la sintaxis correcta para versión 1.x
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      
-      console.log("✅ Supabase versión 1.35.3");
-      console.log("supabase.auth existe?", typeof supabase.auth !== 'undefined');
-      console.log("supabase.from existe?", typeof supabase.from === 'function');
-      
-      // Cargar estadísticas
-      async function cargarEstadisticas() {
-        try {
-          const { count: usuarios, error: countError } = await supabase
-            .from('perfiles')
-            .select('*', { count: 'exact', head: true });
-          
-          if (countError) throw countError;
-          
-          const { data: entregas, error: entregasError } = await supabase
-            .from('entregas')
-            .select('peso_kg');
+      document.addEventListener('DOMContentLoaded', function() {
+        
+        const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        console.log("✅ Supabase listo");
+        
+        // Cargar estadísticas
+        async function cargarEstadisticas() {
+          try {
+            const { count: usuarios } = await supabase
+              .from('perfiles')
+              .select('*', { count: 'exact', head: true });
             
-          if (entregasError) throw entregasError;
-          
-          const totalKg = entregas?.reduce((sum, e) => sum + (e.peso_kg || 0), 0) || 0;
-          const co2Evitado = (totalKg * 0.45).toFixed(1);
-          
-          document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
-          document.getElementById("cont-co2").innerText = `${co2Evitado}kg`;
-        } catch (error) {
-          console.error("Error cargando estadísticas:", error);
-          document.getElementById("cont-usuarios").innerText = "Cargando...";
-          document.getElementById("cont-co2").innerText = "Cargando...";
-        }
-      }
-      
-      // Registro de usuario
-      document.getElementById("registrationForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const confirmPassword = document.getElementById("confirm_password").value;
-        const fullName = document.getElementById("full_name").value;
-        const cedula = document.getElementById("cedula").value;
-
-        if (password !== confirmPassword) {
-          alert("Las contraseñas no coinciden");
-          return;
-        }
-
-        if (password.length < 6) {
-          alert("La contraseña debe tener al menos 6 caracteres");
-          return;
-        }
-
-        try {
-          // Crear usuario en Supabase Auth
-          const { user, error: signUpError } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-          });
-          
-          if (signUpError) throw signUpError;
-          
-          if (!user) {
-            throw new Error("Error al crear usuario");
+            document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
+          } catch (error) {
+            console.error("Error:", error);
           }
-          
-          // Crear perfil en la tabla perfiles
-          const { error: profileError } = await supabase
-            .from('perfiles')
-            .insert({
-              id: user.id,
-              nombre_completo: fullName,
-              cedula: cedula,
-              puntos: 0,
-              co2_ahorrado: 0,
-              rol: 'user'
+        }
+        
+        // Registro
+        document.getElementById("registrationForm").addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const confirmPassword = document.getElementById("confirm_password").value;
+          const fullName = document.getElementById("full_name").value;
+          const cedula = document.getElementById("cedula").value;
+
+          if (password !== confirmPassword) {
+            alert("Las contraseñas no coinciden");
+            return;
+          }
+
+          if (password.length < 6) {
+            alert("La contraseña debe tener al menos 6 caracteres");
+            return;
+          }
+
+          // Deshabilitar botón para evitar doble envío
+          const submitBtn = e.target.querySelector('button[type="submit"]');
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Registrando...";
+
+          try {
+            // 1. Crear usuario en Auth
+            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+              email: email,
+              password: password,
             });
             
-          if (profileError) throw profileError;
-          
-          alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
-          window.location.href = "index.html";
-          
-        } catch (error) {
-          console.error("Error detallado:", error);
-          alert("Error: " + error.message);
-        }
+            if (signUpError) throw signUpError;
+            
+            if (!authData.user) {
+              throw new Error("No se pudo crear el usuario");
+            }
+            
+            console.log("Usuario creado:", authData.user.id);
+            
+            // 2. Crear perfil
+            const { error: profileError } = await supabase
+              .from('perfiles')
+              .insert({
+                id: authData.user.id,
+                nombre_completo: fullName,
+                cedula: cedula,
+                puntos: 0,
+                co2_ahorrado: 0,
+                rol: 'user'
+              });
+              
+            if (profileError) {
+              console.error("Error al crear perfil:", profileError);
+              throw new Error("Error al guardar el perfil: " + profileError.message);
+            }
+            
+            alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
+            window.location.href = "index.html";
+            
+          } catch (error) {
+            console.error("Error completo:", error);
+            alert("Error: " + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Unirme a la Comunidad";
+          }
+        });
+        
+        cargarEstadisticas();
+        
       });
-      
-      // Inicializar
-      cargarEstadisticas();
     </script>
   </body>
 </html>
