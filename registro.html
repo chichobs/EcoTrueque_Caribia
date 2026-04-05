@@ -113,7 +113,7 @@
                 id="cedula"
                 class="w-full bg-surface-container-low border-none rounded-sm px-4 py-3"
                 type="text"
-                placeholder="Cédula"
+                placeholder="Cédula (ej: V-12345678)"
               />
               <input
                 required
@@ -159,101 +159,92 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        
-        const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        console.log("✅ Supabase listo");
-        
-        // Cargar estadísticas
-        async function cargarEstadisticas() {
-          try {
-            const { count: usuarios } = await supabase
-              .from('perfiles')
-              .select('*', { count: 'exact', head: true });
-            
-            document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
-          } catch (error) {
-            console.error("Error:", error);
-          }
+      // Cargar estadísticas
+      async function cargarEstadisticas() {
+        try {
+          const { count: usuarios } = await supabase
+            .from('perfiles')
+            .select('*', { count: 'exact', head: true });
+          
+          document.getElementById("cont-usuarios").innerText = `${usuarios || 0}+`;
+        } catch (error) {
+          console.error("Error:", error);
+          document.getElementById("cont-usuarios").innerText = `0+`;
         }
-        
-        // Registro
-        document.getElementById("registrationForm").addEventListener("submit", async (e) => {
-          e.preventDefault();
+      }
+      
+      // Registro
+      document.getElementById("registrationForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-          const email = document.getElementById("email").value;
-          const password = document.getElementById("password").value;
-          const confirmPassword = document.getElementById("confirm_password").value;
-          const fullName = document.getElementById("full_name").value;
-          const cedula = document.getElementById("cedula").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirm_password").value;
+        const fullName = document.getElementById("full_name").value;
+        const cedula = document.getElementById("cedula").value;
 
-          if (password !== confirmPassword) {
-            alert("Las contraseñas no coinciden");
-            return;
+        if (password !== confirmPassword) {
+          alert("Las contraseñas no coinciden");
+          return;
+        }
+
+        if (password.length < 6) {
+          alert("La contraseña debe tener al menos 6 caracteres");
+          return;
+        }
+
+        // Deshabilitar botón
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Registrando...";
+
+        try {
+          // 1. Crear usuario en Auth
+          const { data: authData, error: signUpError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+          });
+          
+          if (signUpError) throw signUpError;
+          
+          if (!authData.user) {
+            throw new Error("No se pudo crear el usuario");
           }
-
-          if (password.length < 6) {
-            alert("La contraseña debe tener al menos 6 caracteres");
-            return;
-          }
-
-          // Deshabilitar botón para evitar doble envío
-          const submitBtn = e.target.querySelector('button[type="submit"]');
-          submitBtn.disabled = true;
-          submitBtn.textContent = "Registrando...";
-
-          try {
-            // 1. Crear usuario en Auth
-            const { data: authData, error: signUpError } = await supabase.auth.signUp({
-              email: email,
-              password: password,
+          
+          // 2. Crear perfil
+          const { error: profileError } = await supabase
+            .from('perfiles')
+            .insert({
+              id: authData.user.id,
+              nombre_completo: fullName,
+              cedula: cedula,
+              puntos: 0,
+              co2_ahorrado: 0,
+              rol: 'user',
+              email: email
             });
             
-            if (signUpError) throw signUpError;
-            
-            if (!authData.user) {
-              throw new Error("No se pudo crear el usuario");
-            }
-            
-            console.log("Usuario creado:", authData.user.id);
-            
-            // 2. Crear perfil
-            const { error: profileError } = await supabase
-              .from('perfiles')
-              .insert({
-                id: authData.user.id,
-                nombre_completo: fullName,
-                cedula: cedula,
-                puntos: 0,
-                co2_ahorrado: 0,
-                rol: 'user'
-              });
-              
-            if (profileError) {
-              console.error("Error al crear perfil:", profileError);
-              throw new Error("Error al guardar el perfil: " + profileError.message);
-            }
-            
-            alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
-            window.location.href = "index.html";
-            
-          } catch (error) {
-            console.error("Error completo:", error);
-            alert("Error: " + error.message);
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Unirme a la Comunidad";
+          if (profileError) {
+            console.error("Error al crear perfil:", profileError);
+            throw new Error("Error al guardar el perfil: " + profileError.message);
           }
-        });
-        
-        cargarEstadisticas();
-        
+          
+          alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
+          window.location.href = "index.html";
+          
+        } catch (error) {
+          console.error("Error completo:", error);
+          alert("Error: " + error.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
       });
+      
+      cargarEstadisticas();
     </script>
   </body>
 </html>
