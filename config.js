@@ -10,14 +10,47 @@ async function cerrarSesion() {
 }
 
 async function obtenerUsuarioActual() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) return null;
   
-  const { data: perfil } = await supabase
+  const { data: perfil, error: perfilError } = await supabase
     .from('perfiles')
     .select('*')
     .eq('id', user.id)
     .single();
+  
+  if (perfilError) {
+    console.error("Error obteniendo perfil:", perfilError);
+    return { ...user, id: user.id };
+  }
     
+  return { ...user, ...perfil };
+}
+
+async function verificarAutenticacion(rolesPermitidos = null) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  if (userError || !user) {
+    window.location.href = "index.html";
+    return null;
+  }
+  
+  const { data: perfil, error: perfilError } = await supabase
+    .from('perfiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+  
+  if (perfilError) {
+    console.error("Error obteniendo perfil:", perfilError);
+    window.location.href = "index.html";
+    return null;
+  }
+  
+  if (rolesPermitidos && !rolesPermitidos.includes(perfil.rol)) {
+    window.location.href = "index.html";
+    return null;
+  }
+  
   return { ...user, ...perfil };
 }
