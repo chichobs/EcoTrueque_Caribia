@@ -247,12 +247,12 @@
         }
       }
 
-      async function verificarAutenticacion() {
+      async function inicializar() {
         const usuario = await verificarAutenticacion(['admin', 'subadmin']);
         if (!usuario) return;
       }
 
-      window.onload = verificarAutenticacion;
+      window.onload = inicializar;
     </script>
   </body>
 </html>
