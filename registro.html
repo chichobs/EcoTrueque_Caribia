@@ -13,26 +13,31 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
+    <!-- Cargar Supabase primero -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: "#006a2b",
-              "primary-dim": "#005d25",
-              background: "#f6f7f6",
-              surface: "#f6f7f6",
-              "on-surface": "#2c2f2f",
-              "on-surface-variant": "#595c5b",
-              "primary-container": "#72fe8f",
-              "surface-container-low": "#eff1f0",
-              "surface-container-lowest": "#ffffff",
-              "on-primary": "#cfffcf",
-            },
-            fontFamily: { headline: ["Manrope"], body: ["Inter"] },
-          },
-        },
-      };
+      // Configuración directa aquí mismo
+      const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
+      
+      let supabase = null;
+      
+      // Esperar a que la librería esté lista
+      function initSupabase() {
+        if (window.supabase && !supabase) {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          console.log("✅ Supabase inicializado correctamente");
+        }
+        return supabase;
+      }
+      
+      // Intentar inicializar inmediatamente
+      initSupabase();
+      
+      // También intentar cuando el DOM esté listo
+      document.addEventListener('DOMContentLoaded', () => {
+        initSupabase();
+      });
     </script>
     <style>
       .glass-card {
@@ -158,19 +163,46 @@
       </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
-    
     <script>
-      // Verificar que supabase esté disponible
-      if (typeof supabase === 'undefined') {
-        console.error("Supabase no está definido");
-        alert("Error de conexión. Por favor recarga la página.");
+      // Función para esperar a que Supabase esté listo
+      function waitForSupabase() {
+        return new Promise((resolve) => {
+          if (supabase) {
+            resolve(supabase);
+          } else {
+            const checkInterval = setInterval(() => {
+              if (supabase) {
+                clearInterval(checkInterval);
+                resolve(supabase);
+              } else if (window.supabase && !supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                if (supabase) {
+                  clearInterval(checkInterval);
+                  resolve(supabase);
+                }
+              }
+            }, 100);
+            
+            // Timeout después de 5 segundos
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              console.error("Timeout esperando Supabase");
+              resolve(null);
+            }, 5000);
+          }
+        });
       }
       
       async function cargarEstadisticas() {
+        const client = await waitForSupabase();
+        if (!client) {
+          console.error("No se pudo inicializar Supabase");
+          document.getElementById("cont-usuarios").innerText = `0+`;
+          return;
+        }
+        
         try {
-          const { count: usuarios } = await supabase
+          const { count: usuarios } = await client
             .from('perfiles')
             .select('*', { count: 'exact', head: true });
           
@@ -208,10 +240,17 @@
         submitBtn.textContent = "Registrando...";
 
         try {
-          console.log("Iniciando registro...");
+          console.log("Esperando Supabase...");
+          const client = await waitForSupabase();
+          
+          if (!client) {
+            throw new Error("No se pudo conectar con Supabase. Verifica tu conexión a internet.");
+          }
+          
+          console.log("Supabase listo, iniciando registro...");
           
           // 1. Crear usuario en Auth
-          const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          const { data: authData, error: signUpError } = await client.auth.signUp({
             email: email,
             password: password,
           });
@@ -225,7 +264,7 @@
           console.log("Usuario creado:", authData.user.id);
           
           // 2. Crear perfil
-          const { error: profileError } = await supabase
+          const { error: profileError } = await client
             .from('perfiles')
             .insert({
               id: authData.user.id,
@@ -253,7 +292,10 @@
         }
       });
       
-      cargarEstadisticas();
+      // Inicializar
+      waitForSupabase().then(() => {
+        cargarEstadisticas();
+      });
     </script>
   </body>
 </html>
