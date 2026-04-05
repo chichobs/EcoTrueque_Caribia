@@ -129,11 +129,6 @@
                 INGRESA CON TUS REDES
               </h3>
               <div class="grid grid-cols-2 gap-4">
-                <button
-                  class="flex items-center justify-center py-3 px-4 bg-surface-container-low rounded-lg font-medium text-sm border border-transparent hover:bg-white transition-all"
-                >
-                  Google
-                </button>
                 <div
                   class="flex items-center justify-center text-[10px] leading-tight text-center px-2 py-3 bg-surface-container-low/50 rounded-lg text-on-surface-variant italic"
                 >
@@ -217,30 +212,32 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     
     <script>
-      const SUPABASE_URL = "https://qrktpmpitdabxvxriomp.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFya3RwbXBpdGRhYnh2eHJpb21wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwODU3MDUsImV4cCI6MjA5MDY2MTcwNX0.79fkqfQlNJEISPrZrjePWtmP9O-2dLzFmuk2gFQx3PE";
-      
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      
       async function cargarEstadisticas() {
         try {
-          const { count: usuarios } = await supabase
+          const { count: usuarios, error: countError } = await supabase
             .from('perfiles')
             .select('*', { count: 'exact', head: true });
           
-          const { data: entregas } = await supabase
+          if (countError) throw countError;
+          
+          const { data: entregas, error: entregasError } = await supabase
             .from('entregas')
             .select('peso_kg');
+          
+          if (entregasError) throw entregasError;
           
           const totalKg = entregas?.reduce((sum, e) => sum + (e.peso_kg || 0), 0) || 0;
           const co2Evitado = (totalKg * 0.45).toFixed(1);
           
-          document.getElementById("cont-usuarios").innerText = `+${usuarios || 0} Usuarios`;
-          document.getElementById("cont-co2").innerText = `${co2Evitado} Kg Reciclados`;
+          document.getElementById("cont-usuarios").innerHTML = `+${usuarios || 0} Usuarios`;
+          document.getElementById("cont-co2").innerHTML = `${co2Evitado} Kg Reciclados`;
         } catch (error) {
           console.error("Error:", error);
+          document.getElementById("cont-usuarios").innerHTML = `+0 Usuarios`;
+          document.getElementById("cont-co2").innerHTML = `0 Kg Reciclados`;
         }
       }
       
@@ -256,16 +253,12 @@
         submitBtn.innerHTML = '<span>Ingresando...</span>';
 
         try {
-          console.log("Intentando login con:", email);
-          
           const { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
           });
           
           if (error) throw error;
-          
-          console.log("Usuario autenticado:", data.user.id);
           
           // Buscar el perfil del usuario
           const { data: perfil, error: perfilError } = await supabase
@@ -274,24 +267,18 @@
             .eq('id', data.user.id)
             .single();
           
-          if (perfilError) {
+          if (perfilError || !perfil) {
             console.error("Error obteniendo perfil:", perfilError);
-            console.log("Redirigiendo a Usuario.html por defecto");
             window.location.href = "Usuario.html";
             return;
           }
           
-          console.log("Rol del usuario:", perfil.rol);
-          
           // Redirigir según el rol
           if (perfil.rol === 'admin') {
-            console.log("Redirigiendo a panel_admin.html");
             window.location.href = "panel_admin.html";
           } else if (perfil.rol === 'subadmin') {
-            console.log("Redirigiendo a sub_admin.html");
             window.location.href = "sub_admin.html";
           } else {
-            console.log("Redirigiendo a Usuario.html");
             window.location.href = "Usuario.html";
           }
           
